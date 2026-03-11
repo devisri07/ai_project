@@ -1,0 +1,29 @@
+{
+  "labels": [
+    "anger",
+    "joy",
+    "sad"
+  ],
+  "confusion_matrix": [
+    [
+      0,
+      0,
+      6
+    ],
+    [
+      0,
+      0,
+      11
+    ],
+    [
+      0,
+      0,
+      13
+    ]
+  ],
+  "per_class_recall": {
+    "anger": 0.0,
+    "joy": 0.0,
+    "sad": 1.0
+  }
+}

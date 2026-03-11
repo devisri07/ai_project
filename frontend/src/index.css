@@ -1,0 +1,164 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Fredoka:wght@400;500;600;700&display=swap');
+
+/* stylelint-disable at-rule-no-unknown */
+/* stylelint-disable-next-line at-rule-no-unknown */
+@tailwind base;
+/* stylelint-disable-next-line at-rule-no-unknown */
+@tailwind components;
+/* stylelint-disable-next-line at-rule-no-unknown */
+@tailwind utilities;
+/* stylelint-enable at-rule-no-unknown */
+
+@layer base {
+  :root {
+    --background: 270 40% 88%;
+    --foreground: 270 20% 20%;
+
+    --card: 270 35% 92%;
+    --card-foreground: 270 20% 20%;
+
+    --popover: 270 20% 98%;
+    --popover-foreground: 270 20% 20%;
+
+    --primary: 270 70% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 280 60% 70%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 270 20% 92%;
+    --muted-foreground: 270 10% 50%;
+
+    --accent: 270 50% 65%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 270 30% 97%;
+
+    --border: 270 20% 88%;
+    --input: 270 20% 88%;
+    --ring: 270 70% 60%;
+
+    --radius: 1rem;
+
+    /* Magic Mirror custom tokens */
+    --warm: 280 60% 70%;
+    --warm-foreground: 0 0% 100%;
+    --calm: 270 70% 60%;
+    --calm-foreground: 0 0% 100%;
+    --gentle-green: 260 50% 65%;
+    --gentle-green-foreground: 0 0% 100%;
+    --soft-purple: 270 60% 70%;
+    --soft-purple-foreground: 0 0% 100%;
+    --sunshine: 280 50% 68%;
+    --sunshine-foreground: 270 20% 20%;
+
+    /* Theme mode colors */
+    --autism: 270 70% 60%;
+    --adhd: 280 60% 70%;
+    --visual: 260 50% 65%;
+    --hearing: 275 55% 68%;
+
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(270 70% 60% / 0.1), hsl(280 60% 70% / 0.1), hsl(260 50% 65% / 0.1));
+    --gradient-autism: linear-gradient(135deg, hsl(270 70% 60%), hsl(270 70% 65%));
+    --gradient-adhd: linear-gradient(135deg, hsl(280 60% 70%), hsl(275 55% 68%));
+    --gradient-visual: linear-gradient(135deg, hsl(260 50% 65%), hsl(265 60% 68%));
+    --gradient-hearing: linear-gradient(135deg, hsl(275 55% 68%), hsl(270 60% 65%));
+
+    --sidebar-background: 270 20% 97%;
+    --sidebar-foreground: 270 20% 26%;
+    --sidebar-primary: 270 70% 50%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 270 30% 90%;
+    --sidebar-accent-foreground: 270 20% 26%;
+    --sidebar-border: 270 20% 88%;
+    --sidebar-ring: 270 70% 55%;
+  }
+
+  .dark {
+    --background: 270 30% 12%;
+    --foreground: 270 30% 92%;
+    --card: 270 30% 16%;
+    --card-foreground: 270 30% 92%;
+    --popover: 270 30% 16%;
+    --popover-foreground: 270 30% 92%;
+    --primary: 270 70% 65%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 280 60% 70%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 270 20% 20%;
+    --muted-foreground: 270 15% 65%;
+    --accent: 260 50% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 270 30% 97%;
+    --border: 270 30% 22%;
+    --input: 270 30% 22%;
+    --ring: 270 70% 65%;
+    --sidebar-background: 270 30% 12%;
+    --sidebar-foreground: 270 30% 92%;
+    --sidebar-primary: 270 70% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 270 30% 20%;
+    --sidebar-accent-foreground: 270 30% 92%;
+    --sidebar-border: 270 30% 20%;
+    --sidebar-ring: 270 70% 65%;
+  }
+}
+
+@layer base {
+  /* stylelint-disable at-rule-no-unknown */
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Nunito', sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Fredoka', sans-serif;
+  }
+  /* stylelint-enable at-rule-no-unknown */
+}
+
+@layer components {
+  /* stylelint-disable at-rule-no-unknown */
+  .theme-card {
+    @apply rounded-2xl p-6 cursor-pointer transition-all duration-300;
+    @apply hover:scale-105 hover:shadow-xl;
+  }
+  .theme-card-autism {
+    background: var(--gradient-autism);
+    @apply text-primary-foreground;
+  }
+  .theme-card-adhd {
+    background: var(--gradient-adhd);
+    @apply text-warm-foreground;
+  }
+  .theme-card-visual {
+    background: var(--gradient-visual);
+    @apply text-accent-foreground;
+  }
+  .theme-card-hearing {
+    background: var(--gradient-hearing);
+    @apply text-secondary-foreground;
+  }
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-md rounded-2xl border border-border/50 shadow-lg;
+  }
+  .nav-link {
+    @apply px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200;
+    @apply hover:bg-primary/10 text-foreground;
+  }
+  .nav-link-active {
+    @apply bg-primary text-primary-foreground;
+  }
+  .webcam-ring {
+    @apply rounded-full border-4 border-primary/30 shadow-[0_0_30px_hsl(210_70%_55%/0.2)];
+  }
+  .badge-emotion {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-bold;
+  }
+  /* stylelint-enable at-rule-no-unknown */
+}
