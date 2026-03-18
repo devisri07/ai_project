@@ -1,8 +1,6 @@
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useRef } from "react";
-import { useAge } from "@/context/AgeContext";
-import { findVideoByUrl, pickStoryVideo } from "@/data/sampleVideos";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Play,
   Pause,
@@ -17,6 +15,10 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+import { useAge } from "@/context/AgeContext";
+import { findVideoByUrl, pickStoryVideo } from "@/data/sampleVideos";
+import { toast } from "@/components/ui/sonner";
+
 declare global {
   interface Window {
     YT?: any;
@@ -24,46 +26,168 @@ declare global {
   }
 }
 
-const normalizeAge = (value: string) =>
-  (value || "1-10").replace(/â€“|–|—/g, "-");
+interface GeneratedStoryScene {
+  id?: number;
+  title?: string;
+  narration?: string;
+  subtitle?: string;
+  seconds?: number;
+}
 
-const generateStoryContent = (
-  age: string
-): { title: string; scenes: { text: string; bg: string; emoji: string }[] } => {
-  const stories: Record<string, { title: string; scenes: { text: string; bg: string; emoji: string }[] }> = {
+interface GeneratedStory {
+  title?: string;
+  scenes?: GeneratedStoryScene[];
+}
+
+interface RenderedStoryScene {
+  text: string;
+  bg: string;
+  emoji: string;
+  seconds: number;
+}
+
+interface RenderedStory {
+  title: string;
+  scenes: RenderedStoryScene[];
+}
+
+const normalizeAge = (value: string) => (value || "1-10").replace(/[–—]/g, "-");
+
+const fallbackVisuals = [
+  { bg: "from-sky-500 to-cyan-400", emoji: "✨" },
+  { bg: "from-violet-500 to-fuchsia-400", emoji: "📖" },
+  { bg: "from-emerald-500 to-teal-400", emoji: "💛" },
+  { bg: "from-amber-500 to-orange-400", emoji: "⭐" },
+  { bg: "from-rose-500 to-pink-400", emoji: "🌞" },
+];
+
+const generateStoryContent = (age: string): RenderedStory => {
+  const stories: Record<string, RenderedStory> = {
     "1-10": {
       title: "The Magical Garden",
       scenes: [
-        { text: "Once upon a time, in a garden full of rainbow flowers, a little butterfly named Luna woke up.", bg: "from-blue-400 to-purple-400", emoji: "🦋" },
-        { text: "Luna flew over a sparkling stream where friendly fish waved hello and the water shined like glass.", bg: "from-cyan-400 to-blue-400", emoji: "🐟" },
-        { text: "Under a big oak tree, Luna met a soft teddy bear who asked for a kind friend.", bg: "from-green-400 to-emerald-400", emoji: "🧸" },
-        { text: "They danced with musical flowers and laughed until the whole garden felt warm and bright.", bg: "from-pink-400 to-rose-400", emoji: "🌸" },
-        { text: "At sunset, Luna learned that gentle kindness can make a magical friendship grow.", bg: "from-orange-400 to-yellow-400", emoji: "🌅" },
+        {
+          text: "Once upon a time, in a garden full of rainbow flowers, a little butterfly named Luna woke up.",
+          bg: "from-blue-400 to-purple-400",
+          emoji: "🦋",
+          seconds: 8,
+        },
+        {
+          text: "Luna flew over a sparkling stream where friendly fish waved hello and the water shined like glass.",
+          bg: "from-cyan-400 to-blue-400",
+          emoji: "🐟",
+          seconds: 8,
+        },
+        {
+          text: "Under a big oak tree, Luna met a soft teddy bear who asked for a kind friend.",
+          bg: "from-green-400 to-emerald-400",
+          emoji: "🧸",
+          seconds: 8,
+        },
+        {
+          text: "They danced with musical flowers and laughed until the whole garden felt warm and bright.",
+          bg: "from-pink-400 to-rose-400",
+          emoji: "🌸",
+          seconds: 8,
+        },
+        {
+          text: "At sunset, Luna learned that gentle kindness can make a magical friendship grow.",
+          bg: "from-orange-400 to-yellow-400",
+          emoji: "🌅",
+          seconds: 8,
+        },
       ],
     },
     "10-20": {
       title: "The Code Breaker's Quest",
       scenes: [
-        { text: "Maya found a hidden message in class that invited her to solve a mystery beneath the school.", bg: "from-indigo-500 to-blue-500", emoji: "💻" },
-        { text: "She followed clue after clue until the path led her to an old library basement.", bg: "from-purple-500 to-indigo-500", emoji: "📚" },
-        { text: "There she discovered a dusty robotics lab that started glowing as soon as she stepped inside.", bg: "from-slate-500 to-gray-500", emoji: "🤖" },
-        { text: "Maya repaired the central robot and learned it was built to support students with learning challenges.", bg: "from-teal-500 to-cyan-500", emoji: "⚡" },
-        { text: "Her discovery helped the whole school, proving that problem solving can open doors for everyone.", bg: "from-emerald-500 to-green-500", emoji: "🏆" },
+        {
+          text: "Maya found a hidden message in class that invited her to solve a mystery beneath the school.",
+          bg: "from-indigo-500 to-blue-500",
+          emoji: "💻",
+          seconds: 8,
+        },
+        {
+          text: "She followed clue after clue until the path led her to an old library basement.",
+          bg: "from-purple-500 to-indigo-500",
+          emoji: "📚",
+          seconds: 8,
+        },
+        {
+          text: "There she discovered a dusty robotics lab that started glowing as soon as she stepped inside.",
+          bg: "from-slate-500 to-gray-500",
+          emoji: "🤖",
+          seconds: 8,
+        },
+        {
+          text: "Maya repaired the central robot and learned it was built to support students with learning challenges.",
+          bg: "from-teal-500 to-cyan-500",
+          emoji: "⚡",
+          seconds: 8,
+        },
+        {
+          text: "Her discovery helped the whole school, proving that problem solving can open doors for everyone.",
+          bg: "from-emerald-500 to-green-500",
+          emoji: "🏆",
+          seconds: 8,
+        },
       ],
     },
     "20-40": {
       title: "The Silent Symphony",
       scenes: [
-        { text: "In a busy city, an artist named Eli felt surrounded by noise and disconnected from what mattered.", bg: "from-gray-600 to-slate-600", emoji: "🏙️" },
-        { text: "A child at the park asked a simple question about seeing music, and that question stayed with Eli.", bg: "from-amber-500 to-orange-500", emoji: "🎨" },
-        { text: "He began painting feelings instead of objects, letting color and emotion guide each brush stroke.", bg: "from-violet-500 to-purple-500", emoji: "🖌️" },
-        { text: "People connected deeply with the paintings because they felt honest, quiet, and full of meaning.", bg: "from-rose-500 to-pink-500", emoji: "🎭" },
-        { text: "Eli realized that when we slow down and feel fully, life becomes a beautiful symphony again.", bg: "from-sky-500 to-blue-500", emoji: "✨" },
+        {
+          text: "In a busy city, an artist named Eli felt surrounded by noise and disconnected from what mattered.",
+          bg: "from-gray-600 to-slate-600",
+          emoji: "🏙️",
+          seconds: 8,
+        },
+        {
+          text: "A child at the park asked a simple question about seeing music, and that question stayed with Eli.",
+          bg: "from-amber-500 to-orange-500",
+          emoji: "🎨",
+          seconds: 8,
+        },
+        {
+          text: "He began painting feelings instead of objects, letting color and emotion guide each brush stroke.",
+          bg: "from-violet-500 to-purple-500",
+          emoji: "🖌️",
+          seconds: 8,
+        },
+        {
+          text: "People connected deeply with the paintings because they felt honest, quiet, and full of meaning.",
+          bg: "from-rose-500 to-pink-500",
+          emoji: "🎭",
+          seconds: 8,
+        },
+        {
+          text: "Eli realized that when we slow down and feel fully, life becomes a beautiful symphony again.",
+          bg: "from-sky-500 to-blue-500",
+          emoji: "✨",
+          seconds: 8,
+        },
       ],
     },
   };
 
   return stories[normalizeAge(age)] || stories["1-10"];
+};
+
+const buildGeneratedStory = (story: GeneratedStory | null): RenderedStory | null => {
+  if (!story?.scenes?.length) return null;
+
+  return {
+    title: story.title || "Adaptive Story",
+    scenes: story.scenes.map((scene, index) => {
+      const visual = fallbackVisuals[index % fallbackVisuals.length];
+      return {
+        text: scene.subtitle || scene.narration || scene.title || `Scene ${index + 1}`,
+        bg: visual.bg,
+        emoji: visual.emoji,
+        seconds: Math.min(Math.max(scene.seconds || 8, 6), 12),
+      };
+    }),
+  };
 };
 
 const SafetyPauseOverlay = ({ onResume }: { onResume: () => void }) => (
@@ -81,7 +205,7 @@ const SafetyPauseOverlay = ({ onResume }: { onResume: () => void }) => (
       🫧
     </motion.div>
     <Shield className="mb-4 text-blue-300" size={48} />
-    <h2 className="font-display mb-4 text-3xl font-bold text-white">Safety Pause</h2>
+    <h2 className="mb-4 font-display text-3xl font-bold text-white">Safety Pause</h2>
     <p className="mb-6 max-w-md text-center text-lg text-blue-200">
       Let&apos;s slow down and breathe together for a moment.
     </p>
@@ -123,18 +247,40 @@ const SafetyPauseOverlay = ({ onResume }: { onResume: () => void }) => (
 const StoryPlayerPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { age } = useAge();
 
   const selectedAge = normalizeAge(searchParams.get("age") || age);
   const theme = searchParams.get("theme") || "Autism";
   const emotion = searchParams.get("emotion") || "Joy";
   const videoParam = searchParams.get("video") || "";
+  const generatedFlag = searchParams.get("generated") === "1";
 
-  const selectedVideo = findVideoByUrl(videoParam) || pickStoryVideo(selectedAge, emotion, theme);
+  const generatedStoryFromState = (
+    location.state as { generatedStory?: GeneratedStory } | null
+  )?.generatedStory;
+
+  const generatedStoryFromStorage = (() => {
+    if (!generatedFlag || typeof window === "undefined") return null;
+    try {
+      const raw = sessionStorage.getItem("generatedStory");
+      return raw ? (JSON.parse(raw) as GeneratedStory) : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const renderedGeneratedStory = buildGeneratedStory(
+    generatedStoryFromState || generatedStoryFromStorage
+  );
+
+  const selectedVideo = useMemo(
+    () => findVideoByUrl(videoParam) || pickStoryVideo(selectedAge, emotion, theme),
+    [videoParam, selectedAge, emotion, theme]
+  );
   const videoUrl = videoParam || selectedVideo?.url || "";
   const videoIdMatch = videoUrl.match(/[?&]v=([^&]+)/i);
   const videoId = videoIdMatch ? videoIdMatch[1] : "";
-  const isVideoMode = Boolean(videoId);
 
   const [currentScene, setCurrentScene] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -147,21 +293,30 @@ const StoryPlayerPage = () => {
   const [safetyPause, setSafetyPause] = useState(false);
   const [blinkCount, setBlinkCount] = useState(0);
   const [storyComplete, setStoryComplete] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [embedError, setEmbedError] = useState<string | null>(null);
+
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playerRef = useRef<any>(null);
 
-  const story = generateStoryContent(selectedAge);
+  const isVideoMode = Boolean(videoId) && !renderedGeneratedStory && !embedError;
+  const story = renderedGeneratedStory || generateStoryContent(selectedAge);
   const scene = story.scenes[currentScene];
   const progress = ((currentScene + 1) / story.scenes.length) * 100;
 
   useEffect(() => {
+    setCurrentScene(0);
+    setStoryComplete(false);
+  }, [story.title]);
+
+  useEffect(() => {
     if (isVideoMode || !isPlaying || safetyPause) return;
+
     const distressCheck = setInterval(() => {
-      const fakeBlink = Math.random();
-      if (fakeBlink > 0.92) {
+      if (Math.random() > 0.92) {
         setBlinkCount((prev) => prev + 1);
       }
     }, 2000);
+
     return () => clearInterval(distressCheck);
   }, [isPlaying, safetyPause, isVideoMode]);
 
@@ -175,6 +330,7 @@ const StoryPlayerPage = () => {
 
   useEffect(() => {
     if (isVideoMode || !isPlaying || safetyPause || storyComplete) return;
+
     timerRef.current = setTimeout(() => {
       if (currentScene < story.scenes.length - 1) {
         setCurrentScene((prev) => prev + 1);
@@ -182,18 +338,18 @@ const StoryPlayerPage = () => {
         setStoryComplete(true);
         setIsPlaying(false);
       }
-    }, 8000);
+    }, (scene?.seconds || 8) * 1000);
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [currentScene, isPlaying, safetyPause, storyComplete, story.scenes.length, isVideoMode]);
+  }, [currentScene, isPlaying, safetyPause, scene?.seconds, storyComplete, story.scenes.length, isVideoMode]);
 
   useEffect(() => {
     if (!isVideoMode || !videoId) return;
 
     const ensurePlayer = () => {
-      if (playerRef.current) return;
+      if (!window.YT?.Player || playerRef.current) return;
 
       playerRef.current = new window.YT.Player("yt-player", {
         videoId,
@@ -212,8 +368,8 @@ const StoryPlayerPage = () => {
         events: {
           onReady: (event: any) => {
             setPlayerReady(true);
-            event.target.setVolume(volume);
             setTotalTime(event.target.getDuration?.() || 0);
+            event.target.setVolume(volume);
             if (isMuted) {
               event.target.mute();
             } else {
@@ -234,23 +390,39 @@ const StoryPlayerPage = () => {
               setVideoProgress(100);
             }
           },
+          onError: () => {
+            setEmbedError("This YouTube video could not be played here, so an in-app story is shown instead.");
+            setPlayerReady(false);
+            if (playerRef.current && typeof playerRef.current.destroy === "function") {
+              playerRef.current.destroy();
+            }
+            playerRef.current = null;
+            toast.error("That video could not be embedded. Showing an in-app story instead.");
+          },
         },
       });
     };
 
-    if (window.YT && window.YT.Player) {
+    if (window.YT?.Player) {
       ensurePlayer();
-      return;
+    } else {
+      const existingScript = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
+      if (!existingScript) {
+        const tag = document.createElement("script");
+        tag.src = "https://www.youtube.com/iframe_api";
+        document.body.appendChild(tag);
+      }
+      window.onYouTubeIframeAPIReady = ensurePlayer;
     }
 
-    const existingScript = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
-    if (!existingScript) {
-      const tag = document.createElement("script");
-      tag.src = "https://www.youtube.com/iframe_api";
-      document.body.appendChild(tag);
-    }
-    window.onYouTubeIframeAPIReady = ensurePlayer;
-  }, [isVideoMode, videoId, isMuted, isPlaying, volume]);
+    return () => {
+      if (playerRef.current && typeof playerRef.current.destroy === "function") {
+        playerRef.current.destroy();
+      }
+      playerRef.current = null;
+      setPlayerReady(false);
+    };
+  }, [isVideoMode, videoId]);
 
   useEffect(() => {
     if (!playerRef.current || typeof playerRef.current.playVideo !== "function") return;
@@ -284,6 +456,7 @@ const StoryPlayerPage = () => {
     ) {
       return;
     }
+
     const timer = setInterval(() => {
       const duration = playerRef.current.getDuration?.() || 0;
       const current = playerRef.current.getCurrentTime?.() || 0;
@@ -293,6 +466,7 @@ const StoryPlayerPage = () => {
         setVideoProgress(Math.min(100, (current / duration) * 100));
       }
     }, 500);
+
     return () => clearInterval(timer);
   }, [isVideoMode, playerReady]);
 
@@ -322,12 +496,16 @@ const StoryPlayerPage = () => {
     emotion
   )}&age=${encodeURIComponent(selectedAge)}&story=${encodeURIComponent(
     isVideoMode ? selectedVideo.title : story.title
-  )}&video=${encodeURIComponent(videoUrl)}`;
+  )}&video=${encodeURIComponent(isVideoMode ? videoUrl : "")}`;
 
   return (
     <div className="min-h-screen bg-background px-4 py-8">
       <div className="mx-auto max-w-4xl">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 text-center"
+        >
           <div className="mb-2 flex items-center justify-center gap-2">
             <Sparkles className="text-primary" size={24} />
             <h1 className="font-display text-3xl font-bold text-foreground">
@@ -336,7 +514,7 @@ const StoryPlayerPage = () => {
             <Sparkles className="text-primary" size={24} />
           </div>
           <p className="text-muted-foreground">
-            Age: {selectedAge} • Theme: {theme} • Mood: {emotion}
+            Age: {selectedAge} | Theme: {theme} | Mood: {emotion}
           </p>
         </motion.div>
 
@@ -490,6 +668,10 @@ const StoryPlayerPage = () => {
           <div className="mb-6 text-center text-sm text-muted-foreground">{selectedVideo.caption}</div>
         )}
 
+        {!isVideoMode && embedError && (
+          <div className="mb-6 text-center text-sm text-muted-foreground">{embedError}</div>
+        )}
+
         <AnimatePresence>
           {storyComplete && (
             <motion.div
@@ -504,8 +686,10 @@ const StoryPlayerPage = () => {
               >
                 🎉
               </motion.div>
-              <h2 className="font-display mb-2 text-2xl font-bold text-foreground">Story Complete!</h2>
-              <p className="mb-6 text-muted-foreground">Let&apos;s do 4 quick quiz questions based on this video.</p>
+              <h2 className="mb-2 font-display text-2xl font-bold text-foreground">Story Complete!</h2>
+              <p className="mb-6 text-muted-foreground">
+                Let&apos;s do 4 quick quiz questions based on this story.
+              </p>
               <div className="flex items-center justify-center gap-4">
                 <motion.button
                   whileHover={{ scale: 1.05 }}

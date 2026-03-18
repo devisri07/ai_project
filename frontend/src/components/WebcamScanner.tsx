@@ -31,32 +31,69 @@ const WebcamScanner = ({
   sessionToken,
 }: WebcamScannerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [stage, setStage] = useState<"idle" | "streaming" | "scanning" | "done">("idle");
   const [countdown, setCountdown] = useState(5);
   const [result, setResult] = useState<ScanResult | null>(null);
+  const [cameraReady, setCameraReady] = useState(false);
 
   const startCamera = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       if (videoRef.current) {
+        streamRef.current = stream;
         videoRef.current.srcObject = stream;
-        setStage("streaming");
+        videoRef.current.onloadedmetadata = async () => {
+          try {
+            await videoRef.current?.play();
+          } catch {
+            // Ignore autoplay issues; metadata is enough for scanning.
+          }
+          setCameraReady(true);
+          setStage("streaming");
+        };
       }
     } catch {
+      setCameraReady(false);
       setStage("streaming");
     }
   }, []);
 
   const startScan = useCallback(() => {
+    if (!cameraReady) return;
     setStage("scanning");
     setCountdown(5);
+  }, [cameraReady]);
+
+  const waitForVideoReady = useCallback(async () => {
+    const video = videoRef.current;
+    if (!video) return false;
+    if (video.videoWidth > 0 && video.videoHeight > 0 && video.readyState >= 2) {
+      return true;
+    }
+
+    return new Promise<boolean>((resolve) => {
+      const timeout = window.setTimeout(() => resolve(false), 2500);
+      const handleReady = () => {
+        window.clearTimeout(timeout);
+        resolve(video.videoWidth > 0 && video.videoHeight > 0 && video.readyState >= 2);
+      };
+
+      video.addEventListener("loadeddata", handleReady, { once: true });
+      video.addEventListener("canplay", handleReady, { once: true });
+    });
   }, []);
 
   const captureFrames = useCallback(async (count: number, intervalMs: number) => {
     const frames: string[] = [];
     const video = videoRef.current;
-    if (!video || !video.videoWidth || !video.videoHeight) return frames;
-    if (video.readyState < 2) return frames;
+    if (!video) return frames;
+
+    const ready = await waitForVideoReady();
+    if (!ready || !video.videoWidth || !video.videoHeight || video.readyState < 2) {
+      return frames;
+    }
+
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -74,6 +111,12 @@ const WebcamScanner = ({
       }
     }
     return frames;
+  }, [waitForVideoReady]);
+
+  useEffect(() => {
+    return () => {
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+    };
   }, []);
 
   useEffect(() => {
@@ -173,9 +216,10 @@ const WebcamScanner = ({
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={startScan}
+          disabled={!cameraReady}
           className="px-8 py-3 rounded-2xl bg-accent text-accent-foreground font-display font-bold text-lg shadow-lg"
         >
-          Scan My Face
+          {cameraReady ? "Scan My Face" : "Preparing Camera..."}
         </motion.button>
       )}
       {stage === "done" && (
@@ -187,6 +231,7 @@ const WebcamScanner = ({
           onClick={() => {
             setStage("streaming");
             setResult(null);
+            setCameraReady(Boolean(videoRef.current?.videoWidth));
           }}
           className="px-8 py-3 rounded-2xl bg-secondary text-secondary-foreground font-display font-bold text-lg shadow-lg"
         >

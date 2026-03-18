@@ -77,36 +77,43 @@ const buildVideoQuiz = (
 
 const GazeProgress = ({ active, onComplete }: { active: boolean; onComplete: () => void }) => {
   const [progress, setProgress] = useState(0);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [completed, setCompleted] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const stop = useCallback(() => {
+  const clear = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-    setProgress(0);
   }, []);
 
+  const stop = useCallback(() => {
+    clear();
+    setProgress(0);
+    setCompleted(false);
+  }, [clear]);
+
   const start = useCallback(() => {
-    stop();
+    clear();
+    setCompleted(false);
+    setProgress(0);
     intervalRef.current = setInterval(() => {
-      setProgress((prev) => {
-        const next = prev + 5;
-        if (next >= 100) {
-          stop();
-          onComplete();
-          return 100;
-        }
-        return next;
-      });
+      setProgress((prev) => Math.min(prev + 5, 100));
     }, 100);
-  }, [onComplete, stop]);
+  }, [clear]);
 
   useEffect(() => {
     if (active) start();
     else stop();
     return () => stop();
   }, [active, start, stop]);
+
+  useEffect(() => {
+    if (!active || progress < 100 || completed) return;
+    clear();
+    setCompleted(true);
+    onComplete();
+  }, [active, progress, completed, clear, onComplete]);
 
   if (!active && progress === 0) return null;
 
@@ -147,6 +154,9 @@ const QuizPage = () => {
 
   const handleSelect = (index: 0 | 1) => {
     if (showResult) return;
+    if (autoAdvanceRef.current) {
+      window.clearTimeout(autoAdvanceRef.current);
+    }
     setSelected(index);
     setShowResult(true);
     setHoveredOption(null);

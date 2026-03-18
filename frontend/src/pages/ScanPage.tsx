@@ -1,27 +1,32 @@
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useState, useCallback, useEffect } from "react";
+import { ArrowLeft, Sparkles } from "lucide-react";
+
 import WebcamScanner, { ScanResult } from "@/components/WebcamScanner";
 import VideoGrid from "@/components/VideoGrid";
 import { getRecommendedVideos, pickStoryVideo } from "@/data/sampleVideos";
 import { useAge } from "@/context/AgeContext";
-import { useState, useCallback, useEffect } from "react";
-import { ArrowLeft, Sparkles } from "lucide-react";
 import { startGuestSession } from "@/services/api";
 
 const themeLabels: Record<string, { emoji: string; label: string }> = {
-  Autism: { emoji: "🧩", label: "Autism Mode" },
-  ADHD: { emoji: "⚡", label: "ADHD Mode" },
-  Visual: { emoji: "👁️", label: "Visual Mode" },
-  Hearing: { emoji: "👂", label: "Hearing Mode" },
+  Autism: { emoji: "Puzzle", label: "Autism Mode" },
+  ADHD: { emoji: "Flash", label: "ADHD Mode" },
+  Visual: { emoji: "Eye", label: "Visual Mode" },
+  Hearing: { emoji: "Ear", label: "Hearing Mode" },
 };
+
+const normalizeAge = (value: string) => value.replace(/Ã¢â‚¬â€œ|â€“|â€”/g, "-");
 
 const ScanPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const theme = searchParams.get("theme") || "Autism";
   const { age } = useAge();
+  const normalizedAge = normalizeAge(age);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [isGeneratingStory, setIsGeneratingStory] = useState(false);
 
   const handleScanComplete = useCallback((result: ScanResult) => {
     setScanResult(result);
@@ -29,7 +34,7 @@ const ScanPage = () => {
 
   useEffect(() => {
     let mounted = true;
-    startGuestSession(age.replace("â€“", "-"), theme)
+    startGuestSession(normalizedAge, theme)
       .then((res) => {
         if (mounted) setSessionToken(res.session_token);
       })
@@ -39,7 +44,7 @@ const ScanPage = () => {
     return () => {
       mounted = false;
     };
-  }, [age, theme]);
+  }, [normalizedAge, theme]);
 
   const info = themeLabels[theme] || themeLabels.Autism;
 
@@ -47,25 +52,54 @@ const ScanPage = () => {
     ? getRecommendedVideos(age, scanResult.emotion, theme)
     : getRecommendedVideos(age, "Joy", theme);
 
+  const handleGenerateStory = useCallback(async () => {
+    if (!scanResult || isGeneratingStory) return;
+
+    setIsGeneratingStory(true);
+    try {
+      const chosen = pickStoryVideo(normalizedAge, scanResult.emotion, theme);
+      navigate(
+        `/story?theme=${encodeURIComponent(theme)}&emotion=${encodeURIComponent(
+          scanResult.emotion
+        )}&age=${encodeURIComponent(normalizedAge)}&session=${encodeURIComponent(
+          sessionToken || ""
+        )}&video=${encodeURIComponent(chosen.url || "")}`
+      );
+    } catch (error) {
+      console.error("story selection failed", error);
+      const chosen = pickStoryVideo(normalizedAge, scanResult.emotion, theme);
+      navigate(
+        `/story?theme=${encodeURIComponent(theme)}&emotion=${encodeURIComponent(
+          scanResult.emotion
+        )}&age=${encodeURIComponent(normalizedAge)}&session=${encodeURIComponent(
+          sessionToken || ""
+        )}&video=${encodeURIComponent(chosen.url || "")}`
+      );
+    } finally {
+      setIsGeneratingStory(false);
+    }
+  }, [isGeneratingStory, navigate, normalizedAge, scanResult, sessionToken, theme]);
+
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <section className="relative overflow-hidden py-12 px-4" style={{ background: `var(--gradient-${theme.toLowerCase()})` }}>
-        {/* Floating particles */}
+      <section
+        className="relative overflow-hidden px-4 py-12"
+        style={{ background: `var(--gradient-${theme.toLowerCase()})` }}
+      >
         {[...Array(6)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-3 h-3 rounded-full bg-white/20"
-            initial={{ x: Math.random() * 100 + "%", y: "110%" }}
+            className="absolute h-3 w-3 rounded-full bg-white/20"
+            initial={{ x: `${Math.random() * 100}%`, y: "110%" }}
             animate={{ y: "-10%", opacity: [0, 1, 0] }}
             transition={{ duration: 4 + i, repeat: Infinity, delay: i * 0.7 }}
           />
         ))}
 
-        <div className="max-w-4xl mx-auto text-center relative z-10">
+        <div className="relative z-10 mx-auto max-w-4xl text-center">
           <motion.button
             onClick={() => navigate("/")}
-            className="absolute left-0 top-0 flex items-center gap-2 text-white/80 hover:text-white font-semibold"
+            className="absolute left-0 top-0 flex items-center gap-2 font-semibold text-white/80 hover:text-white"
             whileHover={{ x: -4 }}
           >
             <ArrowLeft size={20} /> Back
@@ -75,30 +109,29 @@ const ScanPage = () => {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", bounce: 0.5 }}
-            className="text-6xl mb-4"
+            className="mb-4 text-6xl"
           >
             {info.emoji}
           </motion.div>
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="font-display text-3xl sm:text-4xl font-bold text-white mb-2"
+            className="mb-2 font-display text-3xl font-bold text-white sm:text-4xl"
           >
             {info.label}
           </motion.h1>
-          <p className="text-white/80 font-semibold">Age Group: {age}</p>
+          <p className="font-semibold text-white/80">Age Group: {age}</p>
         </div>
       </section>
 
-      {/* Webcam Section */}
-      <section className="py-12 px-4">
-        <div className="max-w-4xl mx-auto text-center">
+      <section className="px-4 py-12">
+        <div className="mx-auto max-w-4xl text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <div className="flex items-center justify-center gap-2 mb-6">
+            <div className="mb-6 flex items-center justify-center gap-2">
               <Sparkles className="text-primary" size={24} />
               <h2 className="font-display text-2xl font-bold text-foreground">
                 Let the Magic Mirror See You
@@ -107,62 +140,68 @@ const ScanPage = () => {
             </div>
             <WebcamScanner
               onScanComplete={handleScanComplete}
-              ageGroup={age.replace("â€“", "-")}
+              ageGroup={normalizedAge}
               sessionToken={sessionToken || undefined}
             />
           </motion.div>
         </div>
       </section>
 
-      {/* Scan Results */}
       <AnimatePresence>
         {scanResult && (
           <motion.section
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            className="py-8 px-4"
+            className="px-4 py-8"
           >
-            <div className="max-w-4xl mx-auto">
-              <div className="glass-card p-6 mb-8 flex flex-wrap items-center justify-center gap-8">
+            <div className="mx-auto max-w-4xl">
+              <div className="glass-card mb-8 flex flex-wrap items-center justify-center gap-8 p-6">
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Emotion</p>
-                  <p className="font-display text-2xl font-bold text-foreground">{scanResult.emotion}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Emotion
+                  </p>
+                  <p className="font-display text-2xl font-bold text-foreground">
+                    {scanResult.emotion}
+                  </p>
                 </div>
-                <div className="w-px h-12 bg-border hidden sm:block" />
+                <div className="hidden h-12 w-px bg-border sm:block" />
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Age Group</p>
-                  <p className="font-display text-2xl font-bold text-foreground">{scanResult.ageGroup}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Age Group
+                  </p>
+                  <p className="font-display text-2xl font-bold text-foreground">
+                    {scanResult.ageGroup}
+                  </p>
                 </div>
-                <div className="w-px h-12 bg-border hidden sm:block" />
+                <div className="hidden h-12 w-px bg-border sm:block" />
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Attention</p>
-                  <p className="font-display text-2xl font-bold text-accent">{scanResult.attentionLevel}%</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Attention
+                  </p>
+                  <p className="font-display text-2xl font-bold text-accent">
+                    {scanResult.attentionLevel}%
+                  </p>
                 </div>
               </div>
 
-              {/* Generate Story Button */}
-              <div className="text-center mb-10">
+              <div className="mb-10 text-center">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => {
-                    const chosen = pickStoryVideo(age, scanResult.emotion, theme);
-                    navigate(
-                      `/story?theme=${theme}&emotion=${scanResult.emotion}&session=${sessionToken || ""}&video=${encodeURIComponent(
-                        chosen.url || ""
-                      )}`
-                    );
-                  }}
-                  className="px-10 py-5 bg-gradient-to-r from-primary to-secondary text-primary-foreground rounded-2xl font-bold text-xl shadow-2xl flex items-center gap-3 mx-auto"
+                  onClick={handleGenerateStory}
+                  disabled={isGeneratingStory}
+                  className="mx-auto flex items-center gap-3 rounded-2xl bg-gradient-to-r from-primary to-secondary px-10 py-5 text-xl font-bold text-primary-foreground shadow-2xl disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <Sparkles size={24} />
-                  Generate Story
+                  {isGeneratingStory ? "Creating Story..." : "Generate Story"}
                   <Sparkles size={24} />
                 </motion.button>
-                <p className="text-muted-foreground text-sm mt-3">An adaptive story will be created based on your emotion & age</p>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  We will open the best matched story video for your emotion, age, and theme.
+                </p>
               </div>
 
-              <VideoGrid videos={filteredVideos} title="✨ More Stories For You" />
+              <VideoGrid videos={filteredVideos} title="More Stories For You" />
             </div>
           </motion.section>
         )}

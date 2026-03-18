@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 
-const ageGroups = ["1–10", "10–20", "20–40"] as const;
+const ageGroups = ["1-10", "10-20", "20-40"] as const;
 type AgeGroup = typeof ageGroups[number];
 
 interface AgeContextType {
@@ -12,7 +12,8 @@ interface AgeContextType {
 const AgeContext = createContext<AgeContextType | null>(null);
 
 export const AgeProvider = ({ children }: { children: ReactNode }) => {
-  const [age, setAge] = useState<AgeGroup>("1–10");
+  const [age, setAge] = useState<AgeGroup>("1-10");
+
   return (
     <AgeContext.Provider value={{ age, setAge, ageGroups }}>
       {children}
