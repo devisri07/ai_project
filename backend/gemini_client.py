@@ -1,6 +1,11 @@
 import os
-import google.generativeai as genai
 import logging
+import json
+
+try:
+    from google import genai
+except Exception:  # pragma: no cover
+    genai = None
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +17,7 @@ AGE_TEXT_MAP = {
 
 EMOTION_ALIAS = {
     "happy": "joy",
-    "angry": "anger",
+    "angry": "sad",
     "fear": "sad",
     "fearful": "sad",
 }
@@ -22,7 +27,6 @@ TONE_MAP = {
     'joy': 'exciting, fun, adventurous, joyful',
     'sad': 'uplifting, comforting, hopeful, encouraging',
     'angry': 'calming, peaceful, soothing, reassuring',
-    'anger': 'calming, peaceful, soothing, reassuring',
     'surprised': 'wonder-filled, delightful, amazing',
     'neutral': 'friendly, engaging, interesting',
 }
@@ -94,26 +98,35 @@ def generate_story(
     theme=None
 ):
     """Generate a simple story that works reliably."""
-    import json
-    
     api_key = os.getenv('GEMINI_API_KEY')
 
     if not api_key:
         raise ValueError("GEMINI_API_KEY not found in environment.")
 
+    if genai is None:
+        logger.warning("google.genai is not installed. Using fallback storyboard.")
+        return _get_fallback_storyboard(emotion, age_group)
+
     try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("models/gemini-2.5-flash")
+        client = genai.Client(api_key=api_key)
         prompt = _build_prompt(emotion, age_group, disability, autism_mode, theme)
 
         logger.info(f"Calling Gemini for emotion={emotion}, age={age_group}")
-        response = model.generate_content(prompt, temperature=0.7)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
+            config={
+                "temperature": 0.7,
+                "max_output_tokens": 1200,
+            },
+        )
 
-        if not response or not response.text:
+        response_text = getattr(response, "text", None)
+        if not response or not response_text:
             logger.warning("Empty Gemini response")
             return _get_fallback_storyboard(emotion, age_group)
 
-        response_text = response.text.strip()
+        response_text = response_text.strip()
         response_text = _strip_markdown_fence(response_text)
 
         # Parse JSON

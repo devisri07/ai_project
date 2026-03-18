@@ -18,6 +18,7 @@ from models import (
     db,
 )
 from recommendation_engine import build_recommendations
+from smart_friend import generate_smart_friend_reply
 from story_engine import generate_adaptive_story
 from video_customizer import build_customization_plan
 
@@ -92,8 +93,6 @@ def _scan_response(chosen, frames_analyzed: int) -> Dict[str, Any]:
 def _monitor_action(emotion: str, blink_rate: float, gaze_focus_duration: float) -> str:
     if emotion == "joy":
         return "increase_animation_intensity"
-    if emotion == "anger":
-        return "insert_breathing_overlay"
     if emotion == "sad":
         return "simplify_narration"
     if blink_rate > 0.8 and gaze_focus_duration < 30:
@@ -104,7 +103,7 @@ def _monitor_action(emotion: str, blink_rate: float, gaze_focus_duration: float)
 def create_app():
     app = Flask(__name__)
     app.config.from_object(DevelopmentConfig)
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    CORS(app, resources={r"/api/*": {"origins": app.config["CORS_ORIGINS"]}})
     db.init_app(app)
 
     analyzer = EmotionAttentionAnalyzer(
@@ -287,6 +286,22 @@ def create_app():
 
         return jsonify({"total": total, "correct": correct, "accuracy": accuracy})
 
+    @app.route("/api/quiz/gaze", methods=["POST", "OPTIONS"])
+    def quiz_gaze():
+        if request.method == "OPTIONS":
+            return jsonify({"ok": True})
+        data = _json_payload()
+        frame_base64 = data.get("frame_base64")
+        if not isinstance(frame_base64, str) or not frame_base64.strip():
+            return jsonify({"error": "frame_base64 is required"}), 400
+        try:
+            frame_bgr = analyzer.decode_base64_frame(frame_base64)
+            direction = analyzer.estimate_gaze_direction(frame_bgr)
+            return jsonify({"direction": direction})
+        except Exception as exc:
+            app.logger.warning("quiz/gaze: failed to estimate gaze: %s", exc)
+            return jsonify({"direction": "center"})
+
     @app.route("/api/recommendations", methods=["GET", "POST"])
     def recommendations():
         payload = request.get_json(silent=True) if request.method == "POST" else request.args
@@ -377,7 +392,16 @@ def create_app():
         message = data.get("message", "")
         emotion = data.get("emotion", DEFAULT_EMOTION)
         mode = data.get("mode", DEFAULT_THEME)
-        result = generate_chat_reply(message=message, emotion=emotion, mode=mode)
+        try:
+            result = generate_chat_reply(message=message, emotion=emotion, mode=mode)
+        except Exception as exc:
+            app.logger.exception("chat: failed to generate reply: %s", exc)
+            result = {
+                "reply": "Sorry, I had trouble responding just now. Please try again.",
+                "voice_response_recommended": "false",
+                "emotion_used": emotion,
+                "mode_used": mode,
+            }
         return jsonify(result)
 
     @app.route("/api/youtube/customize", methods=["POST"])
@@ -389,6 +413,18 @@ def create_app():
             return jsonify({"error": "youtube_url is required"}), 400
         plan = build_customization_plan(url, mode)
         return jsonify(plan)
+
+    @app.route("/api/smart-friend/respond", methods=["POST", "OPTIONS"])
+    def smart_friend_respond():
+        if request.method == "OPTIONS":
+            return jsonify({"ok": True})
+        data = _json_payload()
+        prompt = data.get("prompt", "")
+        mode = data.get("mode", DEFAULT_THEME)
+        if not prompt:
+            return jsonify({"error": "prompt is required"}), 400
+        result = generate_smart_friend_reply(prompt=prompt, mode=mode)
+        return jsonify(result)
 
     @app.route("/api/session/complete", methods=["POST"])
     def complete_session():

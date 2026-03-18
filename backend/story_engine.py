@@ -34,7 +34,6 @@ THEME_RULES = {
 BASE_MORAL = {
     "joy": "Share joy and include others.",
     "sad": "Courage grows when we ask for support.",
-    "anger": "Pause, breathe, then choose kindness.",
 }
 
 SCENE_TEMPLATES = [

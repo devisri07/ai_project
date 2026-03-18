@@ -13,7 +13,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export async function sendMessageToBackend(message: string, emotion = "joy", mode = "Autism") {
-  return request<{ reply: string }>("/chat", {
+  return request<{ reply: string; source?: string }>("/chat", {
     method: "POST",
     body: JSON.stringify({ message, emotion, mode }),
   });
@@ -72,8 +72,39 @@ export async function getRecommendations(emotion: string, age_group: string, the
 }
 
 export async function customizeYouTube(youtube_url: string, mode: string) {
-  return request<{ status: string; operations: string[] }>("/youtube/customize", {
+  return request<{
+    status: string;
+    operations: string[];
+    summary?: string;
+    converted_title?: string;
+    converted_url?: string;
+    converted_video_id?: string;
+    converted_start_seconds?: number;
+    captions_enabled?: boolean;
+    audio_description_enabled?: boolean;
+  }>("/youtube/customize", {
     method: "POST",
     body: JSON.stringify({ youtube_url, mode }),
+  });
+}
+
+export async function getSmartFriendHelp(prompt: string, mode: string) {
+  return request<{
+    title: string;
+    materials: string[];
+    steps: string[];
+    encouragement: string;
+    voice_text: string;
+    source?: string;
+  }>("/smart-friend/respond", {
+    method: "POST",
+    body: JSON.stringify({ prompt, mode }),
+  });
+}
+
+export async function getQuizGazeDirection(frame_base64: string) {
+  return request<{ direction: "left" | "right" | "center" }>("/quiz/gaze", {
+    method: "POST",
+    body: JSON.stringify({ frame_base64 }),
   });
 }

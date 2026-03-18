@@ -13,6 +13,7 @@ import YouTubeConverter from "./pages/YouTubeConverter";
 import SuggestedVideos from "./pages/SuggestedVideos";
 import StoryPlayerPage from "./pages/StoryPlayerPage";
 import QuizPage from "./pages/QuizPage";
+import SmartFriendPage from "./pages/SmartFriendPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/chatbot" element={<ChatbotPage />} />
             <Route path="/youtube-converter" element={<YouTubeConverter />} />
             <Route path="/suggested-videos" element={<SuggestedVideos />} />
+            <Route path="/smart-friend" element={<SmartFriendPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

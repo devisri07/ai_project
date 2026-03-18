@@ -29,10 +29,8 @@ except Exception:  # pragma: no cover - optional runtime dependency
     DeepFace = None
 
 
-DEFAULT_CLASS_NAMES = ["anger", "joy", "sad"]
+DEFAULT_CLASS_NAMES = ["joy", "sad"]
 EMOTION_ALIAS_MAP = {
-    "anger": "anger",
-    "angry": "anger",
     "fear": "sad",
     "fearful": "sad",
     "sad": "sad",
@@ -69,7 +67,7 @@ class EmotionAttentionAnalyzer:
         self.force_grayscale = force_grayscale
         self.model = self._load_model(emotion_model_path)
         self.class_names = self._load_class_names(class_names_path)
-        self.default_emotion = self.class_names[0] if self.class_names else "anger"
+        self.default_emotion = self.class_names[0] if self.class_names else "joy"
         self._last_emotion_scores: Dict[str, float] = {}
         self.model_input_size = self._infer_model_input_size(self.model)
         self.face_cascade = None
@@ -102,6 +100,30 @@ class EmotionAttentionAnalyzer:
             source=source,
             emotion_scores=self._last_emotion_scores,
         )
+
+    def estimate_gaze_direction(self, frame_bgr: np.ndarray) -> str:
+        if self.face_mesh is None:
+            return "center"
+
+        if cv2 is None:
+            rgb = frame_bgr
+        else:
+            rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+
+        result = self.face_mesh.process(rgb)
+        if not result.multi_face_landmarks:
+            return "center"
+
+        landmarks = result.multi_face_landmarks[0].landmark
+        left_iris = landmarks[468] if len(landmarks) > 468 else landmarks[33]
+        right_iris = landmarks[473] if len(landmarks) > 473 else landmarks[263]
+        center_x = (left_iris.x + right_iris.x) / 2.0
+
+        if center_x < 0.44:
+            return "left"
+        if center_x > 0.56:
+            return "right"
+        return "center"
 
     def decode_base64_frame(self, frame_base64: str) -> np.ndarray:
         payload = frame_base64.split(",", 1)[-1]

@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Send } from "lucide-react";
 import { sendMessageToBackend } from "../services/api";
 
@@ -7,17 +8,21 @@ interface Message {
   id: number;
   text: string;
   sender: "user" | "bot";
+  source?: string;
 }
 
 const ChatbotPage = () => {
+  const [searchParams] = useSearchParams();
+  const theme = searchParams.get("theme") || "Autism";
+  const emotion = (searchParams.get("emotion") || "joy").toLowerCase();
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "Hi there! I'm your Magic Mirror friend 🪞✨ How are you feeling today?",
+      text: `Hello, friend. I am your Magic Mirror helper. I can chat with you in ${theme} mode. How are you feeling today?`,
       sender: "bot",
     },
   ]);
-
   const [input, setInput] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -26,11 +31,12 @@ const ChatbotPage = () => {
   }, [messages]);
 
   const sendMessage = async () => {
-    if (!input.trim()) return;
+    const trimmed = input.trim();
+    if (!trimmed) return;
 
     const userMsg: Message = {
       id: Date.now(),
-      text: input,
+      text: trimmed,
       sender: "user",
     };
 
@@ -38,24 +44,21 @@ const ChatbotPage = () => {
     setInput("");
 
     try {
-      // 🔥 CALL BACKEND HERE
-      const data = await sendMessageToBackend(input);
-
+      const data = await sendMessageToBackend(trimmed, emotion, theme);
       const botMsg: Message = {
         id: Date.now() + 1,
-        text: data.reply || "Sorry, I couldn't understand that.",
+        text: data.reply || "I am here with you.",
         sender: "bot",
+        source: data.source || "unknown",
       };
-
       setMessages((prev) => [...prev, botMsg]);
-    } catch (error) {
-      const errorMsg: Message = {
+    } catch {
+      const fallbackMsg: Message = {
         id: Date.now() + 2,
-        text: "Server error. Please try again later.",
+        text: "I had trouble replying just now. Please try one more time.",
         sender: "bot",
       };
-
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) => [...prev, fallbackMsg]);
     }
   };
 
@@ -67,22 +70,19 @@ const ChatbotPage = () => {
           animate={{ opacity: 1, y: 0 }}
           className="font-display text-3xl font-bold text-foreground mb-2"
         >
-          💬 AI Chatbot
+          AI Chatbot
         </motion.h1>
         <p className="text-muted-foreground mb-6">
           Your friendly emotion-aware companion
         </p>
 
-        {/* Chat area */}
         <div className="flex-1 glass-card p-4 mb-4 overflow-y-auto max-h-[60vh] space-y-3">
           {messages.map((msg) => (
             <motion.div
               key={msg.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`flex ${
-                msg.sender === "user" ? "justify-end" : "justify-start"
-              }`}
+              className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
                 className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm font-body ${
@@ -92,13 +92,17 @@ const ChatbotPage = () => {
                 }`}
               >
                 {msg.text}
+                {msg.sender === "bot" && msg.source && (
+                  <div className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+                    {msg.source}
+                  </div>
+                )}
               </div>
             </motion.div>
           ))}
           <div ref={endRef} />
         </div>
 
-        {/* Input */}
         <div className="flex gap-2">
           <input
             value={input}

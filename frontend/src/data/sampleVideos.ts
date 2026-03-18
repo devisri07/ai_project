@@ -1,249 +1,188 @@
 import { VideoItem } from "@/components/VideoGrid";
 
+const age1 = "1–10";
+const age2 = "10–20";
+const age3 = "20–40";
+const ageAll = "All";
+
+const getYouTubeId = (url: string) => {
+  const match = url.match(/[?&]v=([^&]+)/i);
+  return match ? match[1] : url;
+};
+
+const buildQuizQuestions = (
+  title: string,
+  ageGroup: string,
+  emotion: "Joy" | "Sad",
+  theme: "Autism" | "ADHD" | "Visual" | "Hearing"
+) => {
+  const moralLine =
+    emotion === "Joy"
+      ? "Stay hopeful, kind, and confident."
+      : "It is okay to feel sad, and gentle support helps.";
+  const goalLine =
+    emotion === "Joy"
+      ? "help the child feel happy, brave, and interested"
+      : "comfort the child and gently support calm feelings";
+  const lessonLine =
+    theme === "Hearing"
+      ? "watch visual cues and read captions carefully"
+      : theme === "Visual"
+      ? "listen carefully and imagine the scene in the mind"
+      : theme === "ADHD"
+      ? "stay focused on the main idea step by step"
+      : "follow a calm and predictable story flow";
+  const supportLine =
+    theme === "Hearing"
+      ? "large captions and visual understanding"
+      : theme === "Visual"
+      ? "audio-rich description and clear sound guidance"
+      : theme === "ADHD"
+      ? "focus markers and short, engaging story pacing"
+      : "gentle structure and easy-to-follow scenes";
+
+  return [
+    {
+      question: "What is the moral of this video?",
+      options: [moralLine, "Be worried and give up quickly"] as [string, string],
+      correct: 0 as 0,
+      explanation: `${title} teaches this message: ${moralLine}`,
+    },
+    {
+      question: "What is the main goal of this video?",
+      options: [goalLine, "To confuse the child with many hard ideas"] as [string, string],
+      correct: 0 as 0,
+      explanation: `${title} is meant to ${goalLine}.`,
+    },
+    {
+      question: "What should the child learn from this video?",
+      options: [lessonLine, "To ignore the story and skip the meaning"] as [string, string],
+      correct: 0 as 0,
+      explanation: `This video is designed to help the child ${lessonLine}.`,
+    },
+    {
+      question: "How does this mode support the video?",
+      options: [supportLine, "By removing all guidance and support"] as [string, string],
+      correct: 0 as 0,
+      explanation: `${theme} mode supports this video with ${supportLine}.`,
+    },
+  ];
+};
+
+const makeVideo = (
+  id: string,
+  url: string,
+  title: string,
+  ageGroup: string,
+  emotion: "Joy" | "Sad",
+  theme: "Autism" | "ADHD" | "Visual" | "Hearing"
+): VideoItem => {
+  const videoId = getYouTubeId(url);
+  return {
+    id,
+    title,
+    url,
+    thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+    emotion,
+    theme,
+    ageGroup,
+    caption: `${emotion} story for age ${ageGroup}. Captions recommended.`,
+    quizQuestions: buildQuizQuestions(title, ageGroup, emotion, theme),
+  };
+};
+
 export const sampleVideos: VideoItem[] = [
-  // ── Age 1–10 ──
-  {
-    id: "1",
-    title: "🧩 My Calm Corner – A Predictable Day with Benny Bear",
-    thumbnail: "https://images.unsplash.com/photo-1535572290543-960a8046f5af?w=400&h=225&fit=crop",
-    emotion: "Calm",
-    theme: "Autism",
-    ageGroup: "1–10",
-  },
-  {
-    id: "2",
-    title: "⚡ Captain Focus – The Treasure Hunt Challenge!",
-    thumbnail: "https://images.unsplash.com/photo-1566694271453-390536dd1f0d?w=400&h=225&fit=crop",
-    emotion: "Excited",
-    theme: "ADHD",
-    ageGroup: "1–10",
-  },
-  {
-    id: "3",
-    title: "👁️ The Talking Forest – Audio Adventure for Little Explorers",
-    thumbnail: "https://images.unsplash.com/photo-1448375240586-882707db888b?w=400&h=225&fit=crop",
-    emotion: "Calm",
-    theme: "Visual",
-    ageGroup: "1–10",
-  },
-  {
-    id: "4",
-    title: "👂 Rainbow Hands – Learning Sign Language with Colors",
-    thumbnail: "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=400&h=225&fit=crop",
-    emotion: "Happy",
-    theme: "Hearing",
-    ageGroup: "1–10",
-  },
-  {
-    id: "5",
-    title: "🧩 Same Time, Same Place – Ollie Owl's Routine Story",
-    thumbnail: "https://images.unsplash.com/photo-1474511320723-9a56873867b5?w=400&h=225&fit=crop",
-    emotion: "Happy",
-    theme: "Autism",
-    ageGroup: "1–10",
-  },
-  {
-    id: "6",
-    title: "⚡ Bounce & Learn – Quick Animal Puzzles!",
-    thumbnail: "https://images.unsplash.com/photo-1535241749838-299277c6fc47?w=400&h=225&fit=crop",
-    emotion: "Excited",
-    theme: "ADHD",
-    ageGroup: "1–10",
-  },
-  {
-    id: "7",
-    title: "👁️ Whisper Woods – A Story You Can Hear & Feel",
-    thumbnail: "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400&h=225&fit=crop",
-    emotion: "Calm",
-    theme: "Visual",
-    ageGroup: "1–10",
-  },
-  {
-    id: "8",
-    title: "👂 Splashy the Fish – A Visual Story with Big Subtitles",
-    thumbnail: "https://images.unsplash.com/photo-1535591273668-578e31182c4f?w=400&h=225&fit=crop",
-    emotion: "Happy",
-    theme: "Hearing",
-    ageGroup: "1–10",
-  },
-  {
-    id: "9",
-    title: "🧩 Feelings Faces – What Am I Feeling Today?",
-    thumbnail: "https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=400&h=225&fit=crop",
-    emotion: "Curious",
-    theme: "Autism",
-    ageGroup: "1–10",
-  },
-  {
-    id: "10",
-    title: "⚡ 3-2-1 Go! – Mini Missions for Super Kids",
-    thumbnail: "https://images.unsplash.com/photo-1472162072942-cd5147eb3902?w=400&h=225&fit=crop",
-    emotion: "Happy",
-    theme: "ADHD",
-    ageGroup: "1–10",
-  },
+  // Age 1–10 Joy
+  makeVideo("1", "https://www.youtube.com/watch?v=4BgWg2EAmww", "Joy Story 1", age1, "Joy", "Autism"),
+  makeVideo("2", "https://www.youtube.com/watch?v=0GQ1T1l3CvI", "Joy Story 2", age1, "Joy", "Autism"),
+  makeVideo("3", "https://www.youtube.com/watch?v=xbyEP0M9w7k", "Joy Story 3", age1, "Joy", "Autism"),
+  makeVideo("4", "https://www.youtube.com/watch?v=HFMtfBbJxjI", "Joy Story 4", age1, "Joy", "Autism"),
+  makeVideo("5", "https://www.youtube.com/watch?v=difvQyWFmxw", "Joy Story 5", age1, "Joy", "Autism"),
+  makeVideo("6", "https://www.youtube.com/watch?v=Nczp6WNR7I4", "Joy Story 6", age1, "Joy", "Autism"),
+  makeVideo("7", "https://www.youtube.com/watch?v=NNQWZf1FQyE", "Joy Story 7", age1, "Joy", "Autism"),
 
-  // ── Age 10–20 ──
-  {
-    id: "11",
-    title: "The Brave Little Robot – Finding Purpose",
-    thumbnail: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&h=225&fit=crop",
-    emotion: "Curious",
-    theme: "Autism",
-    ageGroup: "10–20",
-  },
-  {
-    id: "12",
-    title: "Building Blocks – Creative Engineering",
-    thumbnail: "https://images.unsplash.com/photo-1596464716127-f2a82984de30?w=400&h=225&fit=crop",
-    emotion: "Excited",
-    theme: "ADHD",
-    ageGroup: "10–20",
-  },
-  {
-    id: "13",
-    title: "Sign Language Songs – Express Yourself",
-    thumbnail: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=225&fit=crop",
-    emotion: "Happy",
-    theme: "Hearing",
-    ageGroup: "10–20",
-  },
-  {
-    id: "14",
-    title: "Volcano Science – Erupting Knowledge",
-    thumbnail: "https://images.unsplash.com/photo-1462332420958-a05d1e002413?w=400&h=225&fit=crop",
-    emotion: "Excited",
-    theme: "Visual",
-    ageGroup: "10–20",
-  },
-  {
-    id: "15",
-    title: "Ocean Explorer – Deep Sea Mysteries",
-    thumbnail: "https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?w=400&h=225&fit=crop",
-    emotion: "Curious",
-    theme: "ADHD",
-    ageGroup: "10–20",
-  },
-  {
-    id: "16",
-    title: "Code Your World – First Programming Steps",
-    thumbnail: "https://images.unsplash.com/photo-1515879218367-8466d910auj3?w=400&h=225&fit=crop",
-    emotion: "Curious",
-    theme: "Autism",
-    ageGroup: "10–20",
-  },
-  {
-    id: "17",
-    title: "Music & Motion – Rhythm Therapy",
-    thumbnail: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&h=225&fit=crop",
-    emotion: "Happy",
-    theme: "Hearing",
-    ageGroup: "10–20",
-  },
-  {
-    id: "18",
-    title: "Sky Watching – Weather Patterns",
-    thumbnail: "https://images.unsplash.com/photo-1534088568595-a066f410bcda?w=400&h=225&fit=crop",
-    emotion: "Calm",
-    theme: "Visual",
-    ageGroup: "10–20",
-  },
-  {
-    id: "19",
-    title: "Puzzle Master – Brain Training Games",
-    thumbnail: "https://images.unsplash.com/photo-1509228627152-72ae9ae6848d?w=400&h=225&fit=crop",
-    emotion: "Excited",
-    theme: "ADHD",
-    ageGroup: "10–20",
-  },
-  {
-    id: "20",
-    title: "Friendship Goals – Social Skills Journey",
-    thumbnail: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=225&fit=crop",
-    emotion: "Happy",
-    theme: "Autism",
-    ageGroup: "10–20",
-  },
+  // Age 1–10 Sad
+  makeVideo("8", "https://www.youtube.com/watch?v=pFDNl874GWk", "Sad Story 1", age1, "Sad", "Autism"),
+  makeVideo("9", "https://www.youtube.com/watch?v=UbvfRCcuZLA", "Sad Story 2", age1, "Sad", "Autism"),
+  makeVideo("10", "https://www.youtube.com/watch?v=FaoevMkMu1M", "Sad Story 3", age1, "Sad", "Autism"),
+  makeVideo("11", "https://www.youtube.com/watch?v=6J6UpxMxG_8", "Sad Story 4", age1, "Sad", "Autism"),
+  makeVideo("12", "https://www.youtube.com/watch?v=noUFuAc4K-A", "Sad Story 5", age1, "Sad", "Autism"),
 
-  // ── Age 20–40 ──
-  {
-    id: "21",
-    title: "Stargazing – Constellations & Reflection",
-    thumbnail: "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=400&h=225&fit=crop",
-    emotion: "Calm",
-    theme: "Autism",
-    ageGroup: "20–40",
-  },
-  {
-    id: "22",
-    title: "Mindful Breathing – Calm Down Journey",
-    thumbnail: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=400&h=225&fit=crop",
-    emotion: "Calm",
-    theme: "Autism",
-    ageGroup: "20–40",
-  },
-  {
-    id: "23",
-    title: "Mountain Meditation – Finding Inner Peace",
-    thumbnail: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&h=225&fit=crop",
-    emotion: "Calm",
-    theme: "Visual",
-    ageGroup: "20–40",
-  },
-  {
-    id: "24",
-    title: "Productivity Flow – Focus Techniques",
-    thumbnail: "https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?w=400&h=225&fit=crop",
-    emotion: "Curious",
-    theme: "ADHD",
-    ageGroup: "20–40",
-  },
-  {
-    id: "25",
-    title: "Creative Writing – Stories from Within",
-    thumbnail: "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=400&h=225&fit=crop",
-    emotion: "Curious",
-    theme: "Hearing",
-    ageGroup: "20–40",
-  },
-  {
-    id: "26",
-    title: "Art Therapy – Colors of Emotion",
-    thumbnail: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=400&h=225&fit=crop",
-    emotion: "Happy",
-    theme: "Visual",
-    ageGroup: "20–40",
-  },
-  {
-    id: "27",
-    title: "Jazz & Calm – Musical Relaxation",
-    thumbnail: "https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=400&h=225&fit=crop",
-    emotion: "Calm",
-    theme: "Hearing",
-    ageGroup: "20–40",
-  },
-  {
-    id: "28",
-    title: "Time Management – ADHD Strategies",
-    thumbnail: "https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=400&h=225&fit=crop",
-    emotion: "Excited",
-    theme: "ADHD",
-    ageGroup: "20–40",
-  },
-  {
-    id: "29",
-    title: "Self Discovery – Understanding Your Mind",
-    thumbnail: "https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=400&h=225&fit=crop",
-    emotion: "Curious",
-    theme: "Autism",
-    ageGroup: "20–40",
-  },
-  {
-    id: "30",
-    title: "Yoga for Focus – Body & Mind Balance",
-    thumbnail: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=225&fit=crop",
-    emotion: "Calm",
-    theme: "ADHD",
-    ageGroup: "20–40",
-  },
+  // Age 10–20 Joy
+  makeVideo("13", "https://www.youtube.com/watch?v=-belHnGgk9E", "Joy Story 8", age2, "Joy", "ADHD"),
+  makeVideo("14", "https://www.youtube.com/watch?v=J3aJgtzvsuA", "Joy Story 9", age2, "Joy", "ADHD"),
+  makeVideo("15", "https://www.youtube.com/watch?v=RmhH2uVvxmM", "Joy Story 10", age2, "Joy", "ADHD"),
+  makeVideo("16", "https://www.youtube.com/watch?v=GjoYbsvUoO4", "Joy Story 11", age2, "Joy", "ADHD"),
+  makeVideo("17", "https://www.youtube.com/watch?v=0dwkGhRPQW4", "Joy Story 12", age2, "Joy", "ADHD"),
+  makeVideo("18", "https://www.youtube.com/watch?v=H9YMgx5T9Sk", "Joy Story 13", age2, "Joy", "ADHD"),
+  makeVideo("19", "https://www.youtube.com/watch?v=-GEVcgGxgQo", "Joy Story 14", age2, "Joy", "ADHD"),
+  makeVideo("20", "https://www.youtube.com/watch?v=b4jxNGl5-p0", "Joy Story 15", age2, "Joy", "ADHD"),
+  makeVideo("21", "https://www.youtube.com/watch?v=ysu1JimXY0w", "Joy Story 16", age2, "Joy", "ADHD"),
+  makeVideo("22", "https://www.youtube.com/watch?v=UPAkeZBxb0I", "Joy Story 17", age2, "Joy", "ADHD"),
+
+  // Age 10–20 Sad
+  makeVideo("23", "https://www.youtube.com/watch?v=_mtQ9AEFn9Q", "Sad Story 6", age2, "Sad", "ADHD"),
+  makeVideo("24", "https://www.youtube.com/watch?v=W5IjfYQqDbQ", "Sad Story 7", age2, "Sad", "ADHD"),
+  makeVideo("25", "https://www.youtube.com/watch?v=0nTjsPJP3VA", "Sad Story 8", age2, "Sad", "ADHD"),
+  makeVideo("26", "https://www.youtube.com/watch?v=-JDFStMT3XY", "Sad Story 9", age2, "Sad", "ADHD"),
+  makeVideo("27", "https://www.youtube.com/watch?v=72GP8TxRF0Y", "Sad Story 10", age2, "Sad", "ADHD"),
+
+  // Age 20–40 Joy
+  makeVideo("28", "https://www.youtube.com/watch?v=UX5cgiaEGMQ", "Joy Story 18", age3, "Joy", "Visual"),
+  makeVideo("29", "https://www.youtube.com/watch?v=RmhH2uVvxmM", "Joy Story 19", age3, "Joy", "Visual"),
+  makeVideo("30", "https://www.youtube.com/watch?v=flPFlY8hECk", "Joy Story 20", age3, "Joy", "Visual"),
+  makeVideo("31", "https://www.youtube.com/watch?v=3g0W9OVJSsE", "Joy Story 21", age3, "Joy", "Visual"),
+  makeVideo("32", "https://www.youtube.com/watch?v=UOraxP2BPok", "Joy Story 22", age3, "Joy", "Visual"),
+  makeVideo("33", "https://www.youtube.com/watch?v=yR354C_Qw8Q", "Joy Story 23", age3, "Joy", "Visual"),
+  makeVideo("34", "https://www.youtube.com/watch?v=I6i8cLXPGQE", "Joy Story 24", age3, "Joy", "Visual"),
+  makeVideo("35", "https://www.youtube.com/watch?v=9W7KH6LOKkw", "Joy Story 25", age3, "Joy", "Visual"),
+  makeVideo("36", "https://www.youtube.com/watch?v=uAwTWAC0vt0", "Joy Story 26", age3, "Joy", "Visual"),
+  makeVideo("37", "https://www.youtube.com/watch?v=0iRbD5rM5qc", "Joy Story 27", age3, "Joy", "Visual"),
+  makeVideo("38", "https://www.youtube.com/watch?v=JcXKbUIebrU", "Joy Story 28", age3, "Joy", "Visual"),
+  makeVideo("39", "https://www.youtube.com/watch?v=g1J4181W8ss", "Joy Story 29", age3, "Joy", "Visual"),
+  makeVideo("40", "https://www.youtube.com/watch?v=_j4Lj-BT00g", "Joy Story 30", age3, "Joy", "Visual"),
+  makeVideo("41", "https://www.youtube.com/watch?v=bdUqQidffPE", "Joy Story 31", age3, "Joy", "Visual"),
+
+  // Age 20–40 Sad
+  makeVideo("42", "https://www.youtube.com/watch?v=bmyb_3Ydm2Q", "Sad Story 11", age3, "Sad", "Visual"),
+  makeVideo("43", "https://www.youtube.com/watch?v=B0p5SdkBydU", "Sad Story 12", age3, "Sad", "Visual"),
+  makeVideo("44", "https://www.youtube.com/watch?v=sVUiCblDvNA", "Sad Story 13", age3, "Sad", "Visual"),
+  makeVideo("45", "https://www.youtube.com/watch?v=wo1cyvMNpLg", "Sad Story 14", age3, "Sad", "Visual"),
+  makeVideo("46", "https://www.youtube.com/watch?v=Hgk_f9YRmK4", "Sad Story 15", age3, "Sad", "Visual"),
+
+  // Hearing impaired (captions-focused)
+  makeVideo("47", "https://www.youtube.com/watch?v=0dxEAAwEQcA", "Captioned Story 1", ageAll, "Joy", "Hearing"),
+  makeVideo("48", "https://www.youtube.com/watch?v=88QcfP6zRIE", "Captioned Story 2", ageAll, "Joy", "Hearing"),
+  makeVideo("49", "https://www.youtube.com/watch?v=ysu1JimXY0w", "Captioned Story 3", ageAll, "Joy", "Hearing"),
+  makeVideo("50", "https://www.youtube.com/watch?v=CxgZh1CYUzU", "Captioned Story 4", ageAll, "Joy", "Hearing"),
 ];
+
+const shuffle = <T,>(items: T[]) => {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+};
+
+export const getRecommendedVideos = (ageGroup: string, emotion: string, theme: string) => {
+  const normalizedEmotion = emotion === "Sad" ? "Sad" : "Joy";
+  const base = theme === "Hearing"
+    ? sampleVideos.filter((v) => v.theme === "Hearing")
+    : sampleVideos.filter(
+        (v) => (v.ageGroup === ageGroup || v.ageGroup === "All") && v.emotion === normalizedEmotion
+      );
+  return shuffle(base);
+};
+
+export const pickStoryVideo = (ageGroup: string, emotion: string, theme: string) => {
+  const list = getRecommendedVideos(ageGroup, emotion, theme);
+  return list.length ? list[0] : sampleVideos[0];
+};
+
+export const findVideoByUrl = (url: string) => {
+  if (!url) return undefined;
+  const targetId = getYouTubeId(url);
+  return sampleVideos.find((video) => getYouTubeId(video.url || "") === targetId);
+};

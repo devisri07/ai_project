@@ -24,7 +24,7 @@ const Index = () => {
     navigate(`/scan?theme=${theme}`);
   };
 
-  const filteredVideos = sampleVideos.filter((v) => v.ageGroup === age);
+  const filteredVideos = sampleVideos.filter((v) => v.ageGroup === age || v.ageGroup === "All");
 
   return (
     <div className="min-h-screen overflow-hidden">

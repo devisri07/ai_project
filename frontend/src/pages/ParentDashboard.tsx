@@ -20,7 +20,7 @@ const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const emotionData = {
   labels: days,
   datasets: [
-    { label: "Happy", data: [4, 5, 3, 6, 5, 7, 6], borderColor: "hsl(45, 95%, 60%)", backgroundColor: "hsl(45, 95%, 60%, 0.2)", tension: 0.4 },
+    { label: "Joy", data: [4, 5, 3, 6, 5, 7, 6], borderColor: "hsl(45, 95%, 60%)", backgroundColor: "hsl(45, 95%, 60%, 0.2)", tension: 0.4 },
     { label: "Calm", data: [5, 4, 6, 4, 5, 4, 5], borderColor: "hsl(200, 60%, 70%)", backgroundColor: "hsl(200, 60%, 70%, 0.2)", tension: 0.4 },
     { label: "Curious", data: [3, 4, 5, 3, 4, 5, 4], borderColor: "hsl(150, 45%, 55%)", backgroundColor: "hsl(150, 45%, 55%, 0.2)", tension: 0.4 },
   ],

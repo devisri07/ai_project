@@ -10,7 +10,7 @@ age_model = None
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CLASS_NAMES_PATH = os.path.join(BASE_DIR, "models", "emotion_class_names.json")
-DEFAULT_EMOTION_LABELS = ["anger", "joy", "sad"]
+DEFAULT_EMOTION_LABELS = ["joy", "sad"]
 
 
 def _load_emotion_labels() -> list[str]:

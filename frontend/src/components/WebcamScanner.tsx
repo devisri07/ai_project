@@ -15,14 +15,13 @@ export interface ScanResult {
   attentionLevel: number;
 }
 
-const emotions = ["Joy", "Sad", "Anger"];
+const emotions = ["Joy", "Sad"];
 
 function normalizeEmotion(raw: string | undefined): string | null {
   if (!raw) return null;
   const value = raw.trim().toLowerCase();
   if (value === "joy") return "Joy";
   if (value === "fear" || value === "sad") return "Sad";
-  if (value === "anger") return "Anger";
   return null;
 }
 

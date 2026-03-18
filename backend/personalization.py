@@ -10,7 +10,6 @@ AGE_WEIGHT = 0.3
 EMOTION_TONE_MAP = {
     'joy': ['exciting', 'adventurous', 'joyful', 'fun'],
     'sad': ['uplifting', 'comforting', 'encouraging', 'hopeful', 'safe'],
-    'anger': ['calming', 'soothing', 'peaceful', 'reassuring'],
 }
 
 AGE_RANGE_RULES = {
@@ -26,7 +25,7 @@ def calculate_personalization_score(age_group, emotion, attention_score, story_m
     
     Args:
         age_group: str (e.g., "1-10", "10-30", "30-60")
-        emotion: str (e.g., "joy", "sad", "anger")
+        emotion: str (e.g., "joy", "sad")
         attention_score: int (0-10)
         story_metadata: dict with story characteristics
         

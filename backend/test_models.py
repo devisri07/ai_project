@@ -8,12 +8,11 @@ from PIL import Image
 
 EMOTION_MODEL_PATH = "backend/models/emotion_cnn.keras"
 CLASS_NAMES_PATH = "backend/models/emotion_class_names.json"
-DEFAULT_EMOTIONS = ["anger", "joy", "sad"]
+DEFAULT_EMOTIONS = ["joy", "sad"]
 
 EMOTION_EMOJIS = {
     "joy": ":)",
     "sad": ":(",
-    "anger": ">:(",
 }
 
 
@@ -37,7 +36,7 @@ def load_model():
     return model
 
 
-def preprocess_image(image_path, target_size=(128, 128)):
+def preprocess_image(image_path, target_size=(224, 224)):
     img = Image.open(image_path).convert("RGB")
     img = img.resize(target_size)
 

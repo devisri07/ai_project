@@ -1,48 +1,69 @@
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAge } from "@/context/AgeContext";
-import { sampleVideos } from "@/data/sampleVideos";
+import { findVideoByUrl, pickStoryVideo } from "@/data/sampleVideos";
 import {
-  Play, Pause, SkipForward, Volume2, VolumeX, Heart,
-  Wind, AlertTriangle, Shield, Sparkles, ArrowRight
+  Play,
+  Pause,
+  SkipForward,
+  Volume2,
+  Volume1,
+  VolumeX,
+  Wind,
+  AlertTriangle,
+  Shield,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react";
 
-// Story content generator based on age, emotion, theme
-const generateStoryContent = (age: string, emotion: string, theme: string) => {
+declare global {
+  interface Window {
+    YT?: any;
+    onYouTubeIframeAPIReady?: () => void;
+  }
+}
+
+const normalizeAge = (value: string) =>
+  (value || "1-10").replace(/â€“|–|—/g, "-");
+
+const generateStoryContent = (
+  age: string
+): { title: string; scenes: { text: string; bg: string; emoji: string }[] } => {
   const stories: Record<string, { title: string; scenes: { text: string; bg: string; emoji: string }[] }> = {
-    "1–10": {
-      title: "The Magical Garden 🌈",
+    "1-10": {
+      title: "The Magical Garden",
       scenes: [
-        { text: "Once upon a time, in a garden full of rainbow flowers, a little butterfly named Luna woke up...", bg: "from-blue-400 to-purple-400", emoji: "🦋" },
-        { text: "Luna fluttered her colorful wings and flew over the sparkling stream where friendly fish waved hello!", bg: "from-cyan-400 to-blue-400", emoji: "🐟" },
-        { text: "She met a gentle teddy bear sitting under a big oak tree. 'Will you be my friend?' asked the bear.", bg: "from-green-400 to-emerald-400", emoji: "🧸" },
-        { text: "'Of course!' said Luna. They danced together as musical flowers played a sweet melody.", bg: "from-pink-400 to-rose-400", emoji: "🌸" },
-        { text: "As the sun set, they promised to meet every day. Luna learned that kindness makes the best friendships! 💖", bg: "from-orange-400 to-yellow-400", emoji: "🌅" },
+        { text: "Once upon a time, in a garden full of rainbow flowers, a little butterfly named Luna woke up.", bg: "from-blue-400 to-purple-400", emoji: "🦋" },
+        { text: "Luna flew over a sparkling stream where friendly fish waved hello and the water shined like glass.", bg: "from-cyan-400 to-blue-400", emoji: "🐟" },
+        { text: "Under a big oak tree, Luna met a soft teddy bear who asked for a kind friend.", bg: "from-green-400 to-emerald-400", emoji: "🧸" },
+        { text: "They danced with musical flowers and laughed until the whole garden felt warm and bright.", bg: "from-pink-400 to-rose-400", emoji: "🌸" },
+        { text: "At sunset, Luna learned that gentle kindness can make a magical friendship grow.", bg: "from-orange-400 to-yellow-400", emoji: "🌅" },
       ],
     },
-    "10–20": {
-      title: "The Code Breaker's Quest 🔐",
+    "10-20": {
+      title: "The Code Breaker's Quest",
       scenes: [
-        { text: "Maya discovered a mysterious encrypted message in her computer science class. It read: 'Find the hidden lab...'", bg: "from-indigo-500 to-blue-500", emoji: "💻" },
-        { text: "Using her problem-solving skills, she decoded the first clue. It led her to the school's old library basement.", bg: "from-purple-500 to-indigo-500", emoji: "📚" },
-        { text: "There she found a forgotten robotics lab! Dusty machines blinked to life as she entered.", bg: "from-slate-500 to-gray-500", emoji: "🤖" },
-        { text: "She rebuilt the central robot, who revealed it was designed to help students with learning challenges.", bg: "from-teal-500 to-cyan-500", emoji: "⚡" },
-        { text: "Maya presented her discovery to the school. Now every student had an AI tutor. She proved that curiosity changes the world!", bg: "from-emerald-500 to-green-500", emoji: "🏆" },
+        { text: "Maya found a hidden message in class that invited her to solve a mystery beneath the school.", bg: "from-indigo-500 to-blue-500", emoji: "💻" },
+        { text: "She followed clue after clue until the path led her to an old library basement.", bg: "from-purple-500 to-indigo-500", emoji: "📚" },
+        { text: "There she discovered a dusty robotics lab that started glowing as soon as she stepped inside.", bg: "from-slate-500 to-gray-500", emoji: "🤖" },
+        { text: "Maya repaired the central robot and learned it was built to support students with learning challenges.", bg: "from-teal-500 to-cyan-500", emoji: "⚡" },
+        { text: "Her discovery helped the whole school, proving that problem solving can open doors for everyone.", bg: "from-emerald-500 to-green-500", emoji: "🏆" },
       ],
     },
-    "20–40": {
-      title: "The Silent Symphony 🎵",
+    "20-40": {
+      title: "The Silent Symphony",
       scenes: [
-        { text: "In a bustling city, an artist named Eli had forgotten how to hear the music within. Life had become noise.", bg: "from-gray-600 to-slate-600", emoji: "🏙️" },
-        { text: "One morning, a child at the park drew a picture of sound waves. 'Can you see music?' she asked.", bg: "from-amber-500 to-orange-500", emoji: "🎨" },
-        { text: "That question haunted Eli. He began painting not what he saw, but what he felt — emotions became colors.", bg: "from-violet-500 to-purple-500", emoji: "🖌️" },
-        { text: "His exhibition moved people to tears. Each painting resonated like a song only the heart could hear.", bg: "from-rose-500 to-pink-500", emoji: "🎭" },
-        { text: "Eli realized: when we stop and truly feel, we find that life itself is the most beautiful symphony.", bg: "from-sky-500 to-blue-500", emoji: "✨" },
+        { text: "In a busy city, an artist named Eli felt surrounded by noise and disconnected from what mattered.", bg: "from-gray-600 to-slate-600", emoji: "🏙️" },
+        { text: "A child at the park asked a simple question about seeing music, and that question stayed with Eli.", bg: "from-amber-500 to-orange-500", emoji: "🎨" },
+        { text: "He began painting feelings instead of objects, letting color and emotion guide each brush stroke.", bg: "from-violet-500 to-purple-500", emoji: "🖌️" },
+        { text: "People connected deeply with the paintings because they felt honest, quiet, and full of meaning.", bg: "from-rose-500 to-pink-500", emoji: "🎭" },
+        { text: "Eli realized that when we slow down and feel fully, life becomes a beautiful symphony again.", bg: "from-sky-500 to-blue-500", emoji: "✨" },
       ],
     },
   };
-  return stories[age] || stories["1–10"];
+
+  return stories[normalizeAge(age)] || stories["1-10"];
 };
 
 const SafetyPauseOverlay = ({ onResume }: { onResume: () => void }) => (
@@ -50,44 +71,51 @@ const SafetyPauseOverlay = ({ onResume }: { onResume: () => void }) => (
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
     exit={{ opacity: 0 }}
-    className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-blue-900/95 to-purple-900/95 rounded-2xl"
+    className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-2xl bg-gradient-to-br from-blue-900/95 to-purple-900/95"
   >
     <motion.div
       animate={{ scale: [1, 1.2, 1] }}
       transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-      className="text-8xl mb-8"
+      className="mb-8 text-8xl"
     >
       🫧
     </motion.div>
-    <Shield className="text-blue-300 mb-4" size={48} />
-    <h2 className="font-display text-3xl font-bold text-white mb-4">Safety Pause</h2>
-    <p className="text-blue-200 text-center max-w-md mb-6 text-lg">
-      Let's take a moment to breathe together. Follow the bubble...
+    <Shield className="mb-4 text-blue-300" size={48} />
+    <h2 className="font-display mb-4 text-3xl font-bold text-white">Safety Pause</h2>
+    <p className="mb-6 max-w-md text-center text-lg text-blue-200">
+      Let&apos;s slow down and breathe together for a moment.
     </p>
 
-    {/* Breathing guide */}
     <motion.div
-      className="w-32 h-32 rounded-full border-4 border-blue-300/50 flex items-center justify-center mb-8"
-      animate={{ scale: [1, 1.5, 1.5, 1], borderColor: ["rgba(147,197,253,0.5)", "rgba(147,197,253,1)", "rgba(147,197,253,1)", "rgba(147,197,253,0.5)"] }}
+      className="mb-8 flex h-32 w-32 items-center justify-center rounded-full border-4 border-blue-300/50"
+      animate={{
+        scale: [1, 1.5, 1.5, 1],
+        borderColor: [
+          "rgba(147,197,253,0.5)",
+          "rgba(147,197,253,1)",
+          "rgba(147,197,253,1)",
+          "rgba(147,197,253,0.5)",
+        ],
+      }}
       transition={{ duration: 8, repeat: Infinity, times: [0, 0.3, 0.7, 1] }}
     >
       <motion.p
-        className="text-white font-bold text-lg"
+        className="text-lg font-bold text-white"
         animate={{ opacity: [1, 1, 0.5, 1] }}
         transition={{ duration: 8, repeat: Infinity, times: [0, 0.3, 0.7, 1] }}
       >
-        <Wind className="inline mr-1" size={20} />
+        <Wind className="mr-1 inline" size={20} />
         Breathe
       </motion.p>
     </motion.div>
 
     <motion.button
       onClick={onResume}
-      className="px-8 py-3 bg-white/20 hover:bg-white/30 text-white rounded-full font-bold text-lg transition-colors"
+      className="rounded-full bg-white/20 px-8 py-3 text-lg font-bold text-white transition-colors hover:bg-white/30"
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
     >
-      I'm Ready to Continue 💪
+      I&apos;m Ready to Continue
     </motion.button>
   </motion.div>
 );
@@ -96,22 +124,38 @@ const StoryPlayerPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { age } = useAge();
+
+  const selectedAge = normalizeAge(searchParams.get("age") || age);
   const theme = searchParams.get("theme") || "Autism";
-  const emotion = searchParams.get("emotion") || "Happy";
+  const emotion = searchParams.get("emotion") || "Joy";
+  const videoParam = searchParams.get("video") || "";
+
+  const selectedVideo = findVideoByUrl(videoParam) || pickStoryVideo(selectedAge, emotion, theme);
+  const videoUrl = videoParam || selectedVideo?.url || "";
+  const videoIdMatch = videoUrl.match(/[?&]v=([^&]+)/i);
+  const videoId = videoIdMatch ? videoIdMatch[1] : "";
+  const isVideoMode = Boolean(videoId);
 
   const [currentScene, setCurrentScene] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState(70);
+  const [videoProgress, setVideoProgress] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [totalTime, setTotalTime] = useState(0);
+  const [playerReady, setPlayerReady] = useState(false);
   const [safetyPause, setSafetyPause] = useState(false);
   const [blinkCount, setBlinkCount] = useState(0);
   const [storyComplete, setStoryComplete] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const playerRef = useRef<any>(null);
 
-  const story = generateStoryContent(age, emotion, theme);
+  const story = generateStoryContent(selectedAge);
+  const scene = story.scenes[currentScene];
+  const progress = ((currentScene + 1) / story.scenes.length) * 100;
 
-  // Simulate distress detection (random trigger for demo)
   useEffect(() => {
-    if (!isPlaying || safetyPause) return;
+    if (isVideoMode || !isPlaying || safetyPause) return;
     const distressCheck = setInterval(() => {
       const fakeBlink = Math.random();
       if (fakeBlink > 0.92) {
@@ -119,18 +163,18 @@ const StoryPlayerPage = () => {
       }
     }, 2000);
     return () => clearInterval(distressCheck);
-  }, [isPlaying, safetyPause]);
+  }, [isPlaying, safetyPause, isVideoMode]);
 
   useEffect(() => {
+    if (isVideoMode) return;
     if (blinkCount >= 3 && !safetyPause) {
       setSafetyPause(true);
       setIsPlaying(false);
     }
-  }, [blinkCount, safetyPause]);
+  }, [blinkCount, safetyPause, isVideoMode]);
 
-  // Auto-advance scenes
   useEffect(() => {
-    if (!isPlaying || safetyPause || storyComplete) return;
+    if (isVideoMode || !isPlaying || safetyPause || storyComplete) return;
     timerRef.current = setTimeout(() => {
       if (currentScene < story.scenes.length - 1) {
         setCurrentScene((prev) => prev + 1);
@@ -139,8 +183,125 @@ const StoryPlayerPage = () => {
         setIsPlaying(false);
       }
     }, 8000);
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [currentScene, isPlaying, safetyPause, storyComplete, story.scenes.length]);
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [currentScene, isPlaying, safetyPause, storyComplete, story.scenes.length, isVideoMode]);
+
+  useEffect(() => {
+    if (!isVideoMode || !videoId) return;
+
+    const ensurePlayer = () => {
+      if (playerRef.current) return;
+
+      playerRef.current = new window.YT.Player("yt-player", {
+        videoId,
+        playerVars: {
+          autoplay: 1,
+          controls: 1,
+          modestbranding: 1,
+          rel: 0,
+          cc_load_policy: 1,
+          iv_load_policy: 3,
+          fs: 1,
+          playsinline: 1,
+          enablejsapi: 1,
+          origin: window.location.origin,
+        },
+        events: {
+          onReady: (event: any) => {
+            setPlayerReady(true);
+            event.target.setVolume(volume);
+            setTotalTime(event.target.getDuration?.() || 0);
+            if (isMuted) {
+              event.target.mute();
+            } else {
+              event.target.unMute();
+            }
+            if (isPlaying) {
+              event.target.playVideo();
+            }
+          },
+          onStateChange: (event: any) => {
+            if (!window.YT) return;
+            if (event.data === window.YT.PlayerState.PLAYING) {
+              setPlayerReady(true);
+            }
+            if (event.data === window.YT.PlayerState.ENDED) {
+              setStoryComplete(true);
+              setIsPlaying(false);
+              setVideoProgress(100);
+            }
+          },
+        },
+      });
+    };
+
+    if (window.YT && window.YT.Player) {
+      ensurePlayer();
+      return;
+    }
+
+    const existingScript = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
+    if (!existingScript) {
+      const tag = document.createElement("script");
+      tag.src = "https://www.youtube.com/iframe_api";
+      document.body.appendChild(tag);
+    }
+    window.onYouTubeIframeAPIReady = ensurePlayer;
+  }, [isVideoMode, videoId, isMuted, isPlaying, volume]);
+
+  useEffect(() => {
+    if (!playerRef.current || typeof playerRef.current.playVideo !== "function") return;
+    if (isPlaying) {
+      playerRef.current.playVideo();
+    } else {
+      playerRef.current.pauseVideo();
+    }
+  }, [isPlaying]);
+
+  useEffect(() => {
+    if (!playerRef.current || typeof playerRef.current.mute !== "function") return;
+    if (isMuted) {
+      playerRef.current.mute();
+    } else {
+      playerRef.current.unMute();
+    }
+  }, [isMuted]);
+
+  useEffect(() => {
+    if (!playerRef.current || typeof playerRef.current.setVolume !== "function") return;
+    playerRef.current.setVolume(volume);
+  }, [volume]);
+
+  useEffect(() => {
+    if (
+      !isVideoMode ||
+      !playerReady ||
+      !playerRef.current ||
+      typeof playerRef.current.getCurrentTime !== "function"
+    ) {
+      return;
+    }
+    const timer = setInterval(() => {
+      const duration = playerRef.current.getDuration?.() || 0;
+      const current = playerRef.current.getCurrentTime?.() || 0;
+      setCurrentTime(current);
+      setTotalTime(duration);
+      if (duration > 0) {
+        setVideoProgress(Math.min(100, (current / duration) * 100));
+      }
+    }, 500);
+    return () => clearInterval(timer);
+  }, [isVideoMode, playerReady]);
+
+  const formatTime = (seconds: number) => {
+    const safeSeconds = Math.max(0, Math.floor(seconds));
+    const minutes = Math.floor(safeSeconds / 60);
+    const remainingSeconds = safeSeconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+  };
 
   const handleResumeSafety = () => {
     setSafetyPause(false);
@@ -151,125 +312,184 @@ const StoryPlayerPage = () => {
   const handleNext = () => {
     if (currentScene < story.scenes.length - 1) {
       setCurrentScene((prev) => prev + 1);
-    } else {
-      setStoryComplete(true);
-      setIsPlaying(false);
+      return;
     }
+    setStoryComplete(true);
+    setIsPlaying(false);
   };
 
-  const scene = story.scenes[currentScene];
-  const progress = ((currentScene + 1) / story.scenes.length) * 100;
+  const quizUrl = `/quiz?theme=${encodeURIComponent(theme)}&emotion=${encodeURIComponent(
+    emotion
+  )}&age=${encodeURIComponent(selectedAge)}&story=${encodeURIComponent(
+    isVideoMode ? selectedVideo.title : story.title
+  )}&video=${encodeURIComponent(videoUrl)}`;
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-2">
+    <div className="min-h-screen bg-background px-4 py-8">
+      <div className="mx-auto max-w-4xl">
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8 text-center">
+          <div className="mb-2 flex items-center justify-center gap-2">
             <Sparkles className="text-primary" size={24} />
-            <h1 className="font-display text-3xl font-bold text-foreground">{story.title}</h1>
+            <h1 className="font-display text-3xl font-bold text-foreground">
+              {isVideoMode ? selectedVideo.title : story.title}
+            </h1>
             <Sparkles className="text-primary" size={24} />
           </div>
-          <p className="text-muted-foreground">Age: {age} • Theme: {theme} • Mood: {emotion}</p>
+          <p className="text-muted-foreground">
+            Age: {selectedAge} • Theme: {theme} • Mood: {emotion}
+          </p>
         </motion.div>
 
-        {/* Story Player */}
         <motion.div
-          className="relative rounded-2xl overflow-hidden shadow-2xl aspect-video mb-6"
+          className="relative mb-6 aspect-video overflow-hidden rounded-2xl shadow-2xl"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
         >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentScene}
-              initial={{ opacity: 0, x: 60 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -60 }}
-              transition={{ duration: 0.6 }}
-              className={`absolute inset-0 bg-gradient-to-br ${scene.bg} flex flex-col items-center justify-center p-8 sm:p-12`}
-            >
+          {isVideoMode ? (
+            <div className="absolute inset-0 bg-black">
+              <div id="yt-player" className="h-full w-full" />
+              <div className="pointer-events-none absolute bottom-3 right-3 z-20">
+                <div className="rounded-full border border-white/20 bg-black/75 px-4 py-2 text-[10px] font-semibold tracking-[0.3em] text-white shadow-lg backdrop-blur-sm">
+                  MAGIC MIRROR
+                </div>
+              </div>
+            </div>
+          ) : (
+            <AnimatePresence mode="wait">
               <motion.div
-                animate={{ y: [0, -15, 0] }}
-                transition={{ duration: 3, repeat: Infinity }}
-                className="text-7xl sm:text-8xl mb-6"
+                key={currentScene}
+                initial={{ opacity: 0, x: 60 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -60 }}
+                transition={{ duration: 0.6 }}
+                className={`absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br ${scene.bg} p-8 sm:p-12`}
               >
-                {scene.emoji}
+                <motion.div
+                  animate={{ y: [0, -15, 0] }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                  className="mb-6 text-7xl sm:text-8xl"
+                >
+                  {scene.emoji}
+                </motion.div>
+                <p className="max-w-2xl text-center text-lg font-semibold leading-relaxed text-white drop-shadow-lg sm:text-2xl">
+                  {scene.text}
+                </p>
               </motion.div>
-              <p className="text-white text-lg sm:text-2xl font-semibold text-center leading-relaxed max-w-2xl drop-shadow-lg">
-                {scene.text}
-              </p>
-            </motion.div>
-          </AnimatePresence>
+            </AnimatePresence>
+          )}
 
-          {/* Safety Pause Overlay */}
-          <AnimatePresence>
-            {safetyPause && <SafetyPauseOverlay onResume={handleResumeSafety} />}
-          </AnimatePresence>
+          <AnimatePresence>{safetyPause && <SafetyPauseOverlay onResume={handleResumeSafety} />}</AnimatePresence>
 
-          {/* Distress indicator */}
-          {blinkCount >= 2 && !safetyPause && (
+          {blinkCount >= 2 && !safetyPause && !isVideoMode && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="absolute top-4 right-4 bg-destructive/80 text-destructive-foreground px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1"
+              className="absolute right-4 top-4 flex items-center gap-1 rounded-full bg-destructive/80 px-3 py-1 text-xs font-bold text-destructive-foreground"
             >
               <AlertTriangle size={14} /> Monitoring...
             </motion.div>
           )}
         </motion.div>
 
-        {/* Progress Bar */}
-        <div className="w-full bg-muted rounded-full h-3 mb-4 overflow-hidden">
-          <motion.div
-            className="h-full rounded-full bg-gradient-to-r from-primary to-secondary"
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.5 }}
-          />
-        </div>
-        <p className="text-center text-sm text-muted-foreground mb-4">
-          Scene {currentScene + 1} of {story.scenes.length}
-        </p>
+        {isVideoMode ? (
+          <div className="mb-4">
+            <div className="mb-2 flex items-center justify-between text-sm font-medium text-muted-foreground">
+              <span>{formatTime(currentTime)}</span>
+              <span>{formatTime(totalTime)}</span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div className="h-full bg-red-500" style={{ width: `${videoProgress}%` }} />
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="mb-4 h-3 w-full overflow-hidden rounded-full bg-muted">
+              <motion.div
+                className="h-full rounded-full bg-gradient-to-r from-primary to-secondary"
+                animate={{ width: `${progress}%` }}
+                transition={{ duration: 0.5 }}
+              />
+            </div>
+            <p className="mb-4 text-center text-sm text-muted-foreground">
+              Scene {currentScene + 1} of {story.scenes.length}
+            </p>
+          </>
+        )}
 
-        {/* Controls */}
-        <div className="flex items-center justify-center gap-4 mb-8">
+        <div className="mb-8 flex items-center justify-center gap-4">
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setIsPlaying(!isPlaying)}
-            className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg"
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg"
             disabled={storyComplete}
           >
             {isPlaying ? <Pause size={24} /> : <Play size={24} />}
           </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={handleNext}
-            className="w-12 h-12 rounded-full bg-muted text-foreground flex items-center justify-center"
-            disabled={storyComplete}
-          >
-            <SkipForward size={20} />
-          </motion.button>
+
+          {!isVideoMode && (
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={handleNext}
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-foreground"
+              disabled={storyComplete}
+            >
+              <SkipForward size={20} />
+            </motion.button>
+          )}
+
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setIsMuted(!isMuted)}
-            className="w-12 h-12 rounded-full bg-muted text-foreground flex items-center justify-center"
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-foreground"
+            title="Mute or unmute"
           >
             {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
           </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              setIsMuted(false);
+              setVolume(30);
+            }}
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-foreground"
+            title="Low volume"
+          >
+            <Volume1 size={20} />
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              setIsMuted(false);
+              setVolume(100);
+            }}
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-foreground"
+            title="High volume"
+          >
+            <Volume2 size={20} />
+          </motion.button>
+
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setSafetyPause(true)}
-            className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300 flex items-center justify-center"
-            title="Activate Safety Pause"
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300"
+            title="Activate safety pause"
           >
             <Shield size={20} />
           </motion.button>
         </div>
 
-        {/* Story Complete → Go to Quiz */}
+        {isVideoMode && selectedVideo?.caption && (
+          <div className="mb-6 text-center text-sm text-muted-foreground">{selectedVideo.caption}</div>
+        )}
+
         <AnimatePresence>
           {storyComplete && (
             <motion.div
@@ -280,26 +500,26 @@ const StoryPlayerPage = () => {
               <motion.div
                 animate={{ scale: [1, 1.1, 1] }}
                 transition={{ duration: 1.5, repeat: Infinity }}
-                className="text-6xl mb-4"
+                className="mb-4 text-6xl"
               >
                 🎉
               </motion.div>
-              <h2 className="font-display text-2xl font-bold text-foreground mb-2">Story Complete!</h2>
-              <p className="text-muted-foreground mb-6">Great job! Let's see how much you remember.</p>
+              <h2 className="font-display mb-2 text-2xl font-bold text-foreground">Story Complete!</h2>
+              <p className="mb-6 text-muted-foreground">Let&apos;s do 4 quick quiz questions based on this video.</p>
               <div className="flex items-center justify-center gap-4">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate(`/quiz?theme=${theme}&emotion=${emotion}&age=${age}&story=${encodeURIComponent(story.title)}`)}
-                  className="px-8 py-4 bg-gradient-to-r from-primary to-secondary text-primary-foreground rounded-2xl font-bold text-lg shadow-xl flex items-center gap-2"
+                  onClick={() => navigate(quizUrl)}
+                  className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-primary to-secondary px-8 py-4 text-lg font-bold text-primary-foreground shadow-xl"
                 >
                   Take the Quiz <ArrowRight size={20} />
                 </motion.button>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate(`/suggested-videos`)}
-                  className="px-8 py-4 bg-muted text-foreground rounded-2xl font-bold text-lg"
+                  onClick={() => navigate("/suggested-videos")}
+                  className="rounded-2xl bg-muted px-8 py-4 text-lg font-bold text-foreground"
                 >
                   More Stories
                 </motion.button>

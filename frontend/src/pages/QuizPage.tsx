@@ -1,70 +1,118 @@
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useRef } from "react";
-import { CheckCircle, XCircle, Star, Trophy, ArrowRight, Eye } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { motion } from "framer-motion";
+import { CheckCircle, Eye, Star, Trophy, XCircle } from "lucide-react";
+
+import { findVideoByUrl } from "@/data/sampleVideos";
 
 interface QuizQuestion {
   question: string;
-  options: string[];
-  correct: number;
+  options: [string, string];
+  correct: 0 | 1;
+  explanation: string;
 }
 
-const quizBank: Record<string, QuizQuestion[]> = {
-  "1–10": [
-    { question: "What was the butterfly's name?", options: ["Luna", "Stella", "Daisy", "Ruby"], correct: 0 },
-    { question: "Where did Luna fly over?", options: ["A mountain", "A sparkling stream", "A desert", "A city"], correct: 1 },
-    { question: "Who did Luna meet under the oak tree?", options: ["A cat", "A rabbit", "A teddy bear", "A bird"], correct: 2 },
-    { question: "What did the flowers do?", options: ["Danced", "Played music", "Grew tall", "Changed color"], correct: 1 },
-    { question: "What did Luna learn?", options: ["To fly fast", "Kindness makes best friendships", "To sing", "To paint"], correct: 1 },
-  ],
-  "10–20": [
-    { question: "What did Maya find in her class?", options: ["A robot", "An encrypted message", "A treasure map", "A book"], correct: 1 },
-    { question: "Where was the hidden lab?", options: ["Rooftop", "Gym", "Library basement", "Playground"], correct: 2 },
-    { question: "What did the robot help with?", options: ["Cooking", "Learning challenges", "Sports", "Music"], correct: 1 },
-    { question: "What skill did Maya use?", options: ["Drawing", "Problem-solving", "Running", "Singing"], correct: 1 },
-    { question: "What was the result?", options: ["A party", "Every student got an AI tutor", "A vacation", "A new game"], correct: 1 },
-  ],
-  "20–40": [
-    { question: "What was the artist's name?", options: ["Sam", "Alex", "Eli", "Max"], correct: 2 },
-    { question: "What had Eli forgotten?", options: ["How to paint", "The music within", "His name", "His home"], correct: 1 },
-    { question: "Who inspired Eli?", options: ["A musician", "A teacher", "A child at the park", "A friend"], correct: 2 },
-    { question: "What did Eli start painting?", options: ["Landscapes", "What he felt", "Portraits", "Animals"], correct: 1 },
-    { question: "What is life compared to?", options: ["A race", "A beautiful symphony", "A puzzle", "A book"], correct: 1 },
-  ],
-};
+const buildVideoQuiz = (
+  emotion: string,
+  theme: string,
+  ageGroup: string
+): QuizQuestion[] => [
+  {
+    question: "What is the moral of this video?",
+    options: [
+      emotion === "Joy" ? "Stay hopeful and kind." : "It is okay to feel sad and ask for support.",
+      "Be confused and give up.",
+    ],
+    correct: 0,
+    explanation:
+      emotion === "Joy"
+        ? "This video encourages hope, kindness, and confidence."
+        : "This video gently supports calm feelings and comfort.",
+  },
+  {
+    question: "What is the main goal of this video?",
+    options: [
+      emotion === "Joy"
+        ? "To build happy and brave feelings."
+        : "To comfort the viewer and reduce stress.",
+      "To make the viewer feel lost.",
+    ],
+    correct: 0,
+    explanation:
+      emotion === "Joy"
+        ? "The main goal is to create a positive and encouraging feeling."
+        : "The main goal is to comfort the child and create calm support.",
+  },
+  {
+    question: "What should the child learn from this video?",
+    options: [
+      theme === "Hearing"
+        ? "To follow captions and visual cues."
+        : theme === "Visual"
+        ? "To listen carefully and imagine the scene."
+        : theme === "ADHD"
+        ? "To focus on one main idea step by step."
+        : "To follow a calm and predictable story flow.",
+      "To skip the meaning of the story.",
+    ],
+    correct: 0,
+    explanation: `This video is adapted for ${theme} mode and age group ${ageGroup}.`,
+  },
+  {
+    question: "How does this mode support the video?",
+    options: [
+      theme === "Hearing"
+        ? "With captions and visual support."
+        : theme === "Visual"
+        ? "With rich audio description."
+        : theme === "ADHD"
+        ? "With focus cues and short pacing."
+        : "With a gentle and easy-to-follow structure.",
+      "By removing all support.",
+    ],
+    correct: 0,
+    explanation: `${theme} mode helps the child understand the story more easily.`,
+  },
+];
 
 const GazeProgress = ({ active, onComplete }: { active: boolean; onComplete: () => void }) => {
   const [progress, setProgress] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    if (active) {
-      setProgress(0);
-      intervalRef.current = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            onComplete();
-            return 100;
-          }
-          return prev + 5;
-        });
-      }, 100);
-    } else {
-      setProgress(0);
-      if (intervalRef.current) clearInterval(intervalRef.current);
+  const stop = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [active, onComplete]);
+    setProgress(0);
+  }, []);
+
+  const start = useCallback(() => {
+    stop();
+    intervalRef.current = setInterval(() => {
+      setProgress((prev) => {
+        const next = prev + 5;
+        if (next >= 100) {
+          stop();
+          onComplete();
+          return 100;
+        }
+        return next;
+      });
+    }, 100);
+  }, [onComplete, stop]);
+
+  useEffect(() => {
+    if (active) start();
+    else stop();
+    return () => stop();
+  }, [active, start, stop]);
 
   if (!active && progress === 0) return null;
 
   return (
-    <div className="absolute bottom-0 left-0 w-full h-1.5 bg-muted rounded-b-xl overflow-hidden">
-      <motion.div
-        className="h-full bg-gradient-to-r from-primary to-accent"
-        style={{ width: `${progress}%` }}
-        transition={{ duration: 0.1 }}
-      />
+    <div className="absolute bottom-0 left-0 h-1.5 w-full overflow-hidden rounded-b-2xl bg-muted">
+      <motion.div className="h-full bg-gradient-to-r from-primary to-secondary" style={{ width: `${progress}%` }} />
     </div>
   );
 };
@@ -72,120 +120,99 @@ const GazeProgress = ({ active, onComplete }: { active: boolean; onComplete: () 
 const QuizPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const age = searchParams.get("age") || "1–10";
+
   const theme = searchParams.get("theme") || "Autism";
-  const storyTitle = searchParams.get("story") || "Story";
+  const emotion = searchParams.get("emotion") || "Joy";
+  const ageGroup = searchParams.get("age") || "1-10";
+  const videoUrl = searchParams.get("video") || "";
+  const storyTitleParam = decodeURIComponent(searchParams.get("story") || "Story");
+  const matchedVideo = findVideoByUrl(videoUrl);
+  const storyTitle = matchedVideo?.title || storyTitleParam;
+
+  const questions = useMemo(
+    () => matchedVideo?.quizQuestions || buildVideoQuiz(emotion, theme, ageGroup),
+    [matchedVideo, emotion, theme, ageGroup]
+  );
 
   const [currentQ, setCurrentQ] = useState(0);
-  const [selected, setSelected] = useState<number | null>(null);
+  const [selected, setSelected] = useState<0 | 1 | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [score, setScore] = useState(0);
   const [quizDone, setQuizDone] = useState(false);
   const [hoveredOption, setHoveredOption] = useState<number | null>(null);
-  const [stars, setStars] = useState<number[]>([]);
+  const autoAdvanceRef = useRef<number | null>(null);
 
-  const questions = quizBank[age] || quizBank["1–10"];
   const q = questions[currentQ];
   const isCorrect = selected === q.correct;
 
-  const handleGazeSelect = (index: number) => {
+  const handleSelect = (index: 0 | 1) => {
     if (showResult) return;
     setSelected(index);
     setShowResult(true);
+    setHoveredOption(null);
     if (index === q.correct) {
       setScore((prev) => prev + 1);
-      setStars((prev) => [...prev, currentQ]);
     }
+
+    autoAdvanceRef.current = window.setTimeout(() => {
+      if (currentQ < questions.length - 1) {
+        setCurrentQ((prev) => prev + 1);
+        setSelected(null);
+        setShowResult(false);
+      } else {
+        setQuizDone(true);
+      }
+    }, 1400);
   };
 
-  const handleNext = () => {
-    if (currentQ < questions.length - 1) {
-      setCurrentQ((prev) => prev + 1);
-      setSelected(null);
-      setShowResult(false);
-      setHoveredOption(null);
-    } else {
-      setQuizDone(true);
-    }
-  };
+  useEffect(() => {
+    return () => {
+      if (autoAdvanceRef.current) {
+        window.clearTimeout(autoAdvanceRef.current);
+      }
+    };
+  }, []);
 
   if (quizDone) {
-    const percentage = (score / questions.length) * 100;
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
+          initial={{ scale: 0.94, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="glass-card p-10 text-center max-w-lg w-full"
+          className="glass-card w-full max-w-lg p-10 text-center"
         >
-          <motion.div
-            animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.2, 1] }}
-            transition={{ duration: 1.5, repeat: 2 }}
-            className="text-7xl mb-6"
-          >
-            <Trophy className="inline text-yellow-500" size={80} />
-          </motion.div>
-          <h1 className="font-display text-3xl font-bold text-foreground mb-2">Quiz Complete!</h1>
-          <p className="text-muted-foreground mb-6 text-lg">You scored</p>
-
-          <div className="relative w-32 h-32 mx-auto mb-6">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="42" stroke="hsl(var(--muted))" strokeWidth="8" fill="none" />
-              <motion.circle
-                cx="50" cy="50" r="42" stroke="hsl(var(--primary))" strokeWidth="8" fill="none"
-                strokeLinecap="round"
-                initial={{ strokeDasharray: "0 264" }}
-                animate={{ strokeDasharray: `${percentage * 2.64} 264` }}
-                transition={{ duration: 1.5, ease: "easeOut" }}
-              />
-            </svg>
-            <span className="absolute inset-0 flex items-center justify-center font-display text-2xl font-bold text-foreground">
-              {score}/{questions.length}
-            </span>
+          <div className="mb-6">
+            <Trophy className="mx-auto text-yellow-500" size={78} />
           </div>
-
-          {/* Stars */}
-          <div className="flex justify-center gap-2 mb-6">
-            {questions.map((_, i) => (
-              <motion.div
-                key={i}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: i * 0.15 }}
-              >
-                <Star
-                  size={28}
-                  className={stars.includes(i) ? "text-yellow-400 fill-yellow-400" : "text-muted"}
-                />
-              </motion.div>
+          <h1 className="mb-2 font-display text-3xl font-bold text-foreground">Quiz Complete</h1>
+          <p className="mb-6 text-lg text-muted-foreground">
+            You scored {score} out of {questions.length}
+          </p>
+          <div className="mb-6 flex items-center justify-center gap-2">
+            {questions.map((_, index) => (
+              <Star
+                key={index}
+                size={28}
+                className={index < score ? "fill-yellow-400 text-yellow-400" : "text-muted"}
+              />
             ))}
           </div>
-
-          <p className="text-foreground font-semibold text-lg mb-8">
-            {percentage >= 80
-              ? "🌟 Amazing! You're a superstar!"
-              : percentage >= 60
-              ? "👏 Great effort! Keep going!"
-              : "💪 You tried your best! Practice makes perfect!"}
+          <p className="mb-8 text-lg font-semibold text-foreground">
+            {score >= 3 ? "Wonderful. You understood the video very well." : "Nice try. Watch again and you will do even better."}
           </p>
-
           <div className="flex items-center justify-center gap-4">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               onClick={() => navigate("/suggested-videos")}
-              className="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-primary-foreground rounded-xl font-bold flex items-center gap-2"
+              className="rounded-xl bg-gradient-to-r from-primary to-secondary px-6 py-3 font-bold text-primary-foreground"
             >
-              More Stories <ArrowRight size={18} />
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              More Videos
+            </button>
+            <button
               onClick={() => navigate("/")}
-              className="px-6 py-3 bg-muted text-foreground rounded-xl font-bold"
+              className="rounded-xl bg-muted px-6 py-3 font-bold text-foreground"
             >
               Home
-            </motion.button>
+            </button>
           </div>
         </motion.div>
       </div>
@@ -193,125 +220,125 @@ const QuizPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
-          <h1 className="font-display text-3xl font-bold text-foreground mb-1">📝 Story Quiz</h1>
-          <p className="text-muted-foreground text-sm">{decodeURIComponent(storyTitle)}</p>
+    <div className="min-h-screen bg-background px-4 py-8">
+      <div className="mx-auto max-w-5xl">
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8 text-center">
+          <h1 className="mb-2 font-display text-3xl font-bold text-foreground">Video Quiz</h1>
+          <p className="text-muted-foreground">{storyTitle}</p>
         </motion.div>
 
-        {/* Progress */}
-        <div className="flex items-center gap-2 mb-6">
-          {questions.map((_, i) => (
-            <div key={i} className={`flex-1 h-2 rounded-full transition-colors duration-300 ${
-              i < currentQ ? "bg-accent" : i === currentQ ? "bg-primary" : "bg-muted"
-            }`} />
+        <div className="mb-6 flex items-center gap-2">
+          {questions.map((_, index) => (
+            <div
+              key={index}
+              className={`h-2 flex-1 rounded-full transition-colors duration-300 ${
+                index < currentQ ? "bg-accent" : index === currentQ ? "bg-primary" : "bg-muted"
+              }`}
+            />
           ))}
         </div>
 
-        {/* Gaze hint */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-6 bg-muted/50 rounded-full px-4 py-2 mx-auto w-fit"
-        >
+        <div className="mx-auto mb-4 flex w-fit items-center gap-2 rounded-full bg-muted/50 px-4 py-2 text-sm text-muted-foreground">
           <Eye size={16} className="text-primary" />
-          <span>Hover an answer for 2 seconds to select — <strong>no click needed!</strong></span>
-        </motion.div>
+          Keep the pointer over A or B for 2 seconds. No click needed.
+        </div>
 
-        {/* Question */}
         <motion.div
           key={currentQ}
-          initial={{ opacity: 0, x: 40 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="glass-card p-6 sm:p-8 mb-6"
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card mx-auto max-w-5xl p-6 sm:p-8"
         >
-          <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-2">
+          <p className="mb-2 text-center text-xs font-bold uppercase tracking-wider text-muted-foreground">
             Question {currentQ + 1} of {questions.length}
           </p>
-          <h2 className="font-display text-xl sm:text-2xl font-bold text-foreground mb-6">{q.question}</h2>
 
-          <div className="grid gap-3">
-            {q.options.map((option, i) => {
-              let borderClass = "border-border";
-              let bgClass = "bg-card hover:bg-muted/50";
-              if (showResult) {
-                if (i === q.correct) { borderClass = "border-accent"; bgClass = "bg-accent/10"; }
-                else if (i === selected) { borderClass = "border-destructive"; bgClass = "bg-destructive/10"; }
-              } else if (hoveredOption === i) {
-                borderClass = "border-primary"; bgClass = "bg-primary/5";
-              }
+          <div className="grid items-stretch gap-5 lg:grid-cols-[1fr_minmax(280px,420px)_1fr]">
+            <div className="order-1">
+              <div
+                className={`relative flex h-full flex-col justify-center rounded-2xl border-2 ${
+                  showResult
+                    ? q.correct === 0
+                      ? "border-accent bg-accent/10"
+                      : selected === 0
+                      ? "border-destructive bg-destructive/10"
+                      : "border-border bg-card"
+                    : hoveredOption === 0
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-card"
+                } p-5 text-center font-semibold text-foreground transition-colors`}
+                onMouseEnter={() => !showResult && setHoveredOption(0)}
+                onMouseLeave={() => setHoveredOption(null)}
+                onFocus={() => !showResult && setHoveredOption(0)}
+                onBlur={() => setHoveredOption(null)}
+                onTouchStart={() => handleSelect(0)}
+              >
+                <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted text-base font-bold text-muted-foreground">
+                  A
+                </span>
+                <span className="text-base sm:text-lg">{q.options[0]}</span>
+                <div className="mt-4 flex items-center justify-center gap-2">
+                  {showResult && q.correct === 0 && <CheckCircle className="text-accent" size={22} />}
+                  {showResult && selected === 0 && q.correct !== 0 && <XCircle className="text-destructive" size={22} />}
+                </div>
+                <GazeProgress active={hoveredOption === 0 && !showResult} onComplete={() => handleSelect(0)} />
+              </div>
+            </div>
 
-              return (
-                <motion.div
-                  key={i}
-                  className={`relative p-4 rounded-xl border-2 ${borderClass} ${bgClass} cursor-pointer transition-colors font-semibold text-foreground`}
-                  whileHover={!showResult ? { scale: 1.02 } : {}}
-                  onMouseEnter={() => !showResult && setHoveredOption(i)}
-                  onMouseLeave={() => setHoveredOption(null)}
-                  onClick={() => handleGazeSelect(i)}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">
-                      {String.fromCharCode(65 + i)}
-                    </span>
-                    <span>{option}</span>
-                    {showResult && i === q.correct && <CheckCircle className="ml-auto text-accent" size={22} />}
-                    {showResult && i === selected && i !== q.correct && <XCircle className="ml-auto text-destructive" size={22} />}
-                  </div>
-                  <GazeProgress active={hoveredOption === i && !showResult} onComplete={() => handleGazeSelect(i)} />
-                </motion.div>
-              );
-            })}
+            <div className="order-2 flex items-center">
+              <div className="w-full rounded-3xl bg-background/80 px-5 py-8 text-center shadow-inner">
+                <h2 className="font-display text-xl font-bold text-foreground sm:text-2xl">{q.question}</h2>
+              </div>
+            </div>
+
+            <div className="order-3">
+              <div
+                className={`relative flex h-full flex-col justify-center rounded-2xl border-2 ${
+                  showResult
+                    ? q.correct === 1
+                      ? "border-accent bg-accent/10"
+                      : selected === 1
+                      ? "border-destructive bg-destructive/10"
+                      : "border-border bg-card"
+                    : hoveredOption === 1
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-card"
+                } p-5 text-center font-semibold text-foreground transition-colors`}
+                onMouseEnter={() => !showResult && setHoveredOption(1)}
+                onMouseLeave={() => setHoveredOption(null)}
+                onFocus={() => !showResult && setHoveredOption(1)}
+                onBlur={() => setHoveredOption(null)}
+                onTouchStart={() => handleSelect(1)}
+              >
+                <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted text-base font-bold text-muted-foreground">
+                  B
+                </span>
+                <span className="text-base sm:text-lg">{q.options[1]}</span>
+                <div className="mt-4 flex items-center justify-center gap-2">
+                  {showResult && q.correct === 1 && <CheckCircle className="text-accent" size={22} />}
+                  {showResult && selected === 1 && q.correct !== 1 && <XCircle className="text-destructive" size={22} />}
+                </div>
+                <GazeProgress active={hoveredOption === 1 && !showResult} onComplete={() => handleSelect(1)} />
+              </div>
+            </div>
           </div>
         </motion.div>
 
-        {/* Result feedback */}
-        <AnimatePresence>
-          {showResult && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className={`p-5 rounded-xl mb-6 text-center ${
-                isCorrect
-                  ? "bg-accent/10 border border-accent/30"
-                  : "bg-destructive/10 border border-destructive/30"
-              }`}
-            >
-              {isCorrect ? (
-                <>
-                  <motion.div
-                    animate={{ scale: [1, 1.3, 1], rotate: [0, 15, -15, 0] }}
-                    transition={{ duration: 0.6 }}
-                    className="text-5xl mb-2"
-                  >
-                    🌟
-                  </motion.div>
-                  <p className="font-bold text-accent text-lg">Wonderful! That's correct! 🎉</p>
-                </>
-              ) : (
-                <>
-                  <div className="text-4xl mb-2">💪</div>
-                  <p className="font-bold text-destructive mb-1">Not quite, but that's okay!</p>
-                  <p className="text-muted-foreground text-sm">
-                    The correct answer was: <strong>{q.options[q.correct]}</strong>. You're learning — keep going!
-                  </p>
-                </>
-              )}
-
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleNext}
-                className="mt-4 px-6 py-2 bg-primary text-primary-foreground rounded-xl font-bold"
-              >
-                {currentQ < questions.length - 1 ? "Next Question →" : "See Results 🏆"}
-              </motion.button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {showResult && (
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`mx-auto mt-5 max-w-3xl rounded-xl border p-5 text-center ${
+              isCorrect ? "border-accent/30 bg-accent/10" : "border-destructive/30 bg-destructive/10"
+            }`}
+          >
+            <p className={`mb-2 text-lg font-bold ${isCorrect ? "text-accent" : "text-destructive"}`}>
+              {isCorrect ? "Correct" : "Almost there"}
+            </p>
+            <p className="text-sm text-muted-foreground">{q.explanation}</p>
+            <p className="mt-3 text-xs text-muted-foreground">Moving to the next question automatically...</p>
+          </motion.div>
+        )}
       </div>
     </div>
   );

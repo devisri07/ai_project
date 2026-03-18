@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { Home, BarChart3, MessageCircle, Video, Play, Menu, X } from "lucide-react";
+import { Home, BarChart3, MessageCircle, Video, Play, Menu, X, HandHelping } from "lucide-react";
 import { useAge } from "@/context/AgeContext";
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
   { to: "/chatbot", label: "AI Chatbot", icon: MessageCircle },
   { to: "/youtube-converter", label: "Video Converter", icon: Video },
   { to: "/suggested-videos", label: "Suggested Videos", icon: Play },
+  { to: "/smart-friend", label: "Smart Friend", icon: HandHelping },
 ];
 
 const Navbar = () => {

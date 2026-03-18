@@ -26,7 +26,7 @@ def detect_dataset() -> str:
             for name in os.listdir(path)
             if os.path.isdir(os.path.join(path, name))
         }
-        if {"anger", "joy", "sad"}.issubset(child_dirs):
+        if {"joy", "sad"}.issubset(child_dirs):
             return path
     return os.path.join(PROJECT_ROOT, "dataset")
 

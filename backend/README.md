@@ -68,13 +68,12 @@ Supported dataset layouts:
 Layout A (standard split):
 Dataset/any-name/
   train/
-    anger/ joy/ sad/ ...
+    joy/ sad/ ...
   val/
-    anger/ joy/ sad/ ...
+    joy/ sad/ ...
 
 Layout B (single root, auto split):
 dataset/
-  anger/
   joy/
   sad/
 ```

@@ -2,7 +2,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import WebcamScanner, { ScanResult } from "@/components/WebcamScanner";
 import VideoGrid from "@/components/VideoGrid";
-import { sampleVideos } from "@/data/sampleVideos";
+import { getRecommendedVideos, pickStoryVideo } from "@/data/sampleVideos";
 import { useAge } from "@/context/AgeContext";
 import { useState, useCallback, useEffect } from "react";
 import { ArrowLeft, Sparkles } from "lucide-react";
@@ -43,9 +43,9 @@ const ScanPage = () => {
 
   const info = themeLabels[theme] || themeLabels.Autism;
 
-  const filteredVideos = sampleVideos.filter(
-    (v) => v.ageGroup === age && (v.theme === theme || (scanResult && v.emotion === scanResult.emotion))
-  );
+  const filteredVideos = scanResult
+    ? getRecommendedVideos(age, scanResult.emotion, theme)
+    : getRecommendedVideos(age, "Joy", theme);
 
   return (
     <div className="min-h-screen">
@@ -145,7 +145,14 @@ const ScanPage = () => {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate(`/story?theme=${theme}&emotion=${scanResult.emotion}&session=${sessionToken || ""}`)}
+                  onClick={() => {
+                    const chosen = pickStoryVideo(age, scanResult.emotion, theme);
+                    navigate(
+                      `/story?theme=${theme}&emotion=${scanResult.emotion}&session=${sessionToken || ""}&video=${encodeURIComponent(
+                        chosen.url || ""
+                      )}`
+                    );
+                  }}
                   className="px-10 py-5 bg-gradient-to-r from-primary to-secondary text-primary-foreground rounded-2xl font-bold text-xl shadow-2xl flex items-center gap-3 mx-auto"
                 >
                   <Sparkles size={24} />
