@@ -32,7 +32,7 @@ def detect_dataset() -> str:
 
 
 def main() -> None:
-    print("Magic Mirror - Quick Emotion Training")
+    print("BrightBridge - Quick Emotion Training")
     print("=" * 60)
 
     dataset_path = detect_dataset()

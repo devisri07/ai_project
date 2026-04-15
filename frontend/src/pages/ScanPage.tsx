@@ -134,7 +134,7 @@ const ScanPage = () => {
             <div className="mb-6 flex items-center justify-center gap-2">
               <Sparkles className="text-primary" size={24} />
               <h2 className="font-display text-2xl font-bold text-foreground">
-                Let the Magic Mirror See You
+                Let BrightBridge See You
               </h2>
               <Sparkles className="text-primary" size={24} />
             </div>

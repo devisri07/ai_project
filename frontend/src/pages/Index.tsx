@@ -64,21 +64,13 @@ const Index = () => {
         ))}
 
         <div className="relative z-10 mx-auto max-w-6xl text-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: "spring", bounce: 0.4 }}
-            className="mb-4"
-          >
-            <span className="text-6xl sm:text-7xl">🪞</span>
-          </motion.div>
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="mb-4 font-display text-4xl font-bold leading-tight text-foreground sm:text-5xl lg:text-6xl"
           >
-            Magic Mirror
+            BrightBridge
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 10 }}
@@ -151,7 +143,7 @@ const Index = () => {
             transition={{ delay: 0.8 }}
             className="text-xs text-muted-foreground"
           >
-            Click a mode above and the Magic Mirror will scan and suggest a story for you
+            Click a mode above and BrightBridge will scan and suggest a story for you
           </motion.p>
         </div>
       </section>
@@ -186,7 +178,7 @@ const Index = () => {
             viewport={{ once: true }}
             className="mb-12 text-center font-display text-2xl font-bold text-foreground sm:text-3xl"
           >
-            How Magic Mirror Works
+            How BrightBridge Works
           </motion.h2>
           <div className="grid gap-8 sm:grid-cols-3">
             {[
@@ -206,7 +198,7 @@ const Index = () => {
                   {item.step}
                 </div>
                 <div className="mb-3 text-4xl">{item.emoji}</div>
-                <h3 className="mb-1 text-lg font-bold text-foreground font-display">{item.title}</h3>
+                <h3 className="mb-1 font-display text-lg font-bold text-foreground">{item.title}</h3>
                 <p className="text-sm text-muted-foreground">{item.desc}</p>
               </motion.div>
             ))}

@@ -1,9 +1,9 @@
-# AI-Driven Multi-Modal Facial Emotion, Age & Attention Detection Enabled Adaptive Storytelling System (Magic Mirror)
+# AI-Driven Multi-Modal Facial Emotion, Age & Attention Detection Enabled Adaptive Storytelling System (BrightBridge)
 
 ## 1. What Is Implemented
 - Guest-mode backend only (no authentication, no personal identity storage)
 - Flask REST API for scan, story, monitoring, quiz, recommendations, dashboards, chatbot, and YouTube customization plan
-- SQLite analytics storage (`magic_mirror.db`) with session-level and event-level metrics
+- SQLite analytics storage (`brightbridge.db`) with session-level and event-level metrics
 - CNN training pipeline for your uploaded dataset (supports `Dataset/sad` and standard `train/val` layouts)
 - Frontend service integration updates without changing visual design
 

@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Chart as ChartJS,
@@ -13,87 +14,199 @@ import {
 } from "chart.js";
 import { Line, Bar, Doughnut } from "react-chartjs-2";
 
+import { getParentDashboard } from "@/services/api";
+
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement);
 
-const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+type ParentDashboardResponse = Awaited<ReturnType<typeof getParentDashboard>>;
 
-const emotionData = {
-  labels: days,
-  datasets: [
-    { label: "Joy", data: [4, 5, 3, 6, 5, 7, 6], borderColor: "hsl(45, 95%, 60%)", backgroundColor: "hsl(45, 95%, 60%, 0.2)", tension: 0.4 },
-    { label: "Calm", data: [5, 4, 6, 4, 5, 4, 5], borderColor: "hsl(200, 60%, 70%)", backgroundColor: "hsl(200, 60%, 70%, 0.2)", tension: 0.4 },
-    { label: "Curious", data: [3, 4, 5, 3, 4, 5, 4], borderColor: "hsl(150, 45%, 55%)", backgroundColor: "hsl(150, 45%, 55%, 0.2)", tension: 0.4 },
-  ],
-};
-
-const attentionData = {
-  labels: days,
-  datasets: [
-    { label: "Attention %", data: [72, 80, 68, 85, 78, 90, 82], backgroundColor: "hsl(210, 70%, 55%, 0.7)", borderRadius: 8 },
-  ],
-};
-
-const quizData = {
-  labels: ["Correct", "Incorrect"],
-  datasets: [
-    { data: [78, 22], backgroundColor: ["hsl(150, 45%, 55%)", "hsl(0, 60%, 65%)"], borderWidth: 0 },
-  ],
+const emptyData: ParentDashboardResponse = {
+  emotion_history: {},
+  emotion_chart: { labels: ["No Data"], values: [1] },
+  attention_chart: { labels: ["No Sessions"], values: [0] },
+  story_chart: { labels: ["No Stories"], values: [0] },
+  quiz_chart: { labels: ["Correct", "Incorrect"], values: [0, 0] },
+  attention_trend_average: 0,
+  story_completion_rate: 0,
+  quiz_accuracy: 0,
+  summary: {
+    stories_completed: 0,
+    avg_attention: 0,
+    sessions_count: 0,
+    improvement: 0,
+    reward_points: 0,
+  },
+  recommended_improvements: [],
 };
 
 const ParentDashboard = () => {
-  return (
-    <div className="min-h-screen py-10 px-4">
-      <div className="max-w-6xl mx-auto">
-        <motion.h1
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="font-display text-3xl font-bold text-foreground mb-2"
-        >
-          📊 Parent Dashboard
-        </motion.h1>
-        <p className="text-muted-foreground mb-8">Track your child's engagement and progress</p>
+  const [dashboard, setDashboard] = useState<ParentDashboardResponse>(emptyData);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Emotion History */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card p-6">
-            <h3 className="font-display font-bold text-lg mb-4 text-card-foreground">Emotion History</h3>
-            <Line data={emotionData} options={{ responsive: true, plugins: { legend: { position: "bottom" } } }} />
+  useEffect(() => {
+    let mounted = true;
+
+    const load = async () => {
+      try {
+        setLoading(true);
+        const result = await getParentDashboard();
+        if (mounted) {
+          setDashboard(result);
+          setError("");
+        }
+      } catch {
+        if (mounted) {
+          setError("Dashboard data could not load right now.");
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    load();
+    const timer = window.setInterval(load, 12000);
+    return () => {
+      mounted = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  const emotionData = useMemo(
+    () => ({
+      labels: dashboard.emotion_chart.labels,
+      datasets: [
+        {
+          label: "Emotion Readings",
+          data: dashboard.emotion_chart.values,
+          borderColor: "hsl(272, 82%, 60%)",
+          backgroundColor: "hsla(272, 82%, 60%, 0.18)",
+          tension: 0.35,
+          fill: true,
+        },
+      ],
+    }),
+    [dashboard]
+  );
+
+  const attentionData = useMemo(
+    () => ({
+      labels: dashboard.attention_chart.labels,
+      datasets: [
+        {
+          label: "Attention %",
+          data: dashboard.attention_chart.values,
+          backgroundColor: "hsla(214, 90%, 57%, 0.7)",
+          borderRadius: 10,
+        },
+      ],
+    }),
+    [dashboard]
+  );
+
+  const quizData = useMemo(
+    () => ({
+      labels: dashboard.quiz_chart.labels,
+      datasets: [
+        {
+          data: dashboard.quiz_chart.values,
+          backgroundColor: ["hsl(142, 71%, 45%)", "hsl(0, 72%, 63%)"],
+          borderWidth: 0,
+        },
+      ],
+    }),
+    [dashboard]
+  );
+
+  const storyData = useMemo(
+    () => ({
+      labels: dashboard.story_chart.labels,
+      datasets: [
+        {
+          label: "Stories Completed",
+          data: dashboard.story_chart.values,
+          backgroundColor: "hsla(38, 92%, 50%, 0.75)",
+          borderRadius: 10,
+        },
+      ],
+    }),
+    [dashboard]
+  );
+
+  const stats = [
+    { label: "Stories Completed", value: `${dashboard.summary.stories_completed}`, icon: "📚" },
+    { label: "Avg Attention", value: `${dashboard.summary.avg_attention}%`, icon: "🎯" },
+    { label: "Sessions", value: `${dashboard.summary.sessions_count}`, icon: "🗓️" },
+    { label: "Improvement", value: `${dashboard.summary.improvement}%`, icon: "📈" },
+    { label: "Quiz Accuracy", value: `${dashboard.quiz_accuracy}%`, icon: "✅" },
+    { label: "Reward Points", value: `${dashboard.summary.reward_points}`, icon: "⭐" },
+  ];
+
+  return (
+    <div className="min-h-screen px-4 py-10">
+      <div className="mx-auto max-w-6xl">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+          <h1 className="font-display text-3xl font-bold text-foreground">Parent Dashboard</h1>
+          <p className="mt-2 text-muted-foreground">
+            Live progress updates from story sessions, emotions, attention, and quiz performance.
+          </p>
+        </motion.div>
+
+        {error && <div className="mb-6 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">{error}</div>}
+
+        <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {stats.map((item, index) => (
+            <motion.div
+              key={item.label}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              className="glass-card p-5"
+            >
+              <div className="mb-2 text-2xl">{item.icon}</div>
+              <p className="text-sm text-muted-foreground">{item.label}</p>
+              <p className="mt-1 font-display text-2xl font-bold text-foreground">{item.value}</p>
+            </motion.div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-6">
+            <h3 className="mb-4 font-display text-lg font-bold text-card-foreground">Emotion History</h3>
+            <Line data={emotionData} options={{ responsive: true, plugins: { legend: { display: false } } }} />
           </motion.div>
 
-          {/* Attention Trend */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass-card p-6">
-            <h3 className="font-display font-bold text-lg mb-4 text-card-foreground">Attention Trend</h3>
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-6">
+            <h3 className="mb-4 font-display text-lg font-bold text-card-foreground">Attention Trend</h3>
             <Bar data={attentionData} options={{ responsive: true, plugins: { legend: { display: false } } }} />
           </motion.div>
 
-          {/* Quiz Performance */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card p-6">
-            <h3 className="font-display font-bold text-lg mb-4 text-card-foreground">Quiz Accuracy</h3>
-            <div className="max-w-[200px] mx-auto">
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-6">
+            <h3 className="mb-4 font-display text-lg font-bold text-card-foreground">Quiz Performance</h3>
+            <div className="mx-auto max-w-[220px]">
               <Doughnut data={quizData} options={{ plugins: { legend: { position: "bottom" } } }} />
             </div>
           </motion.div>
 
-          {/* Stats */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="glass-card p-6">
-            <h3 className="font-display font-bold text-lg mb-4 text-card-foreground">Summary</h3>
-            <div className="space-y-4">
-              {[
-                { label: "Stories Completed", value: "12", icon: "📖" },
-                { label: "Avg Attention", value: "79%", icon: "🎯" },
-                { label: "Sessions This Week", value: "5", icon: "📅" },
-                { label: "Improvement", value: "+15%", icon: "📈" },
-              ].map((stat) => (
-                <div key={stat.label} className="flex items-center justify-between p-3 rounded-xl bg-muted">
-                  <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <span>{stat.icon}</span> {stat.label}
-                  </span>
-                  <span className="font-display font-bold text-foreground">{stat.value}</span>
-                </div>
-              ))}
-            </div>
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-6">
+            <h3 className="mb-4 font-display text-lg font-bold text-card-foreground">Story Completion</h3>
+            <Bar data={storyData} options={{ responsive: true, plugins: { legend: { display: false } } }} />
           </motion.div>
         </div>
+
+        <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="glass-card mt-6 p-6">
+          <h3 className="mb-4 font-display text-lg font-bold text-card-foreground">Recommended Improvements</h3>
+          <div className="space-y-3">
+            {(dashboard.recommended_improvements.length ? dashboard.recommended_improvements : ["More session data will appear here after the next story and quiz."]).map((tip) => (
+              <div key={tip} className="rounded-2xl bg-background/70 px-4 py-3 text-sm text-foreground">
+                {tip}
+              </div>
+            ))}
+          </div>
+          {loading && <p className="mt-4 text-sm text-muted-foreground">Refreshing dashboard data...</p>}
+        </motion.div>
       </div>
     </div>
   );

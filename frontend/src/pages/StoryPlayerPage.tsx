@@ -17,6 +17,7 @@ import {
 
 import { useAge } from "@/context/AgeContext";
 import { findVideoByUrl, pickStoryVideo } from "@/data/sampleVideos";
+import { completeStory } from "@/services/api";
 import { toast } from "@/components/ui/sonner";
 
 declare global {
@@ -254,6 +255,7 @@ const StoryPlayerPage = () => {
   const theme = searchParams.get("theme") || "Autism";
   const emotion = searchParams.get("emotion") || "Joy";
   const videoParam = searchParams.get("video") || "";
+  const sessionToken = searchParams.get("session") || "";
   const generatedFlag = searchParams.get("generated") === "1";
 
   const generatedStoryFromState = (
@@ -297,6 +299,7 @@ const StoryPlayerPage = () => {
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playerRef = useRef<any>(null);
+  const completionReportedRef = useRef(false);
 
   const isVideoMode = Boolean(videoId) && !renderedGeneratedStory && !embedError;
   const story = renderedGeneratedStory || generateStoryContent(selectedAge);
@@ -306,7 +309,20 @@ const StoryPlayerPage = () => {
   useEffect(() => {
     setCurrentScene(0);
     setStoryComplete(false);
+    completionReportedRef.current = false;
   }, [story.title]);
+
+  useEffect(() => {
+    if (!storyComplete || completionReportedRef.current || !sessionToken) return;
+    completionReportedRef.current = true;
+
+    completeStory({
+      session_token: sessionToken,
+      title: isVideoMode ? selectedVideo?.title || story.title : story.title,
+    }).catch(() => {
+      completionReportedRef.current = false;
+    });
+  }, [storyComplete, sessionToken, isVideoMode, selectedVideo?.title, story.title]);
 
   useEffect(() => {
     if (isVideoMode || !isPlaying || safetyPause) return;
@@ -495,8 +511,10 @@ const StoryPlayerPage = () => {
   const quizUrl = `/quiz?theme=${encodeURIComponent(theme)}&emotion=${encodeURIComponent(
     emotion
   )}&age=${encodeURIComponent(selectedAge)}&story=${encodeURIComponent(
-    isVideoMode ? selectedVideo.title : story.title
-  )}&video=${encodeURIComponent(isVideoMode ? videoUrl : "")}`;
+    isVideoMode ? selectedVideo?.title || story.title : story.title
+  )}&video=${encodeURIComponent(isVideoMode ? videoUrl : "")}&session=${encodeURIComponent(
+    sessionToken
+  )}`;
 
   return (
     <div className="min-h-screen bg-background px-4 py-8">
@@ -528,7 +546,7 @@ const StoryPlayerPage = () => {
               <div id="yt-player" className="h-full w-full" />
               <div className="pointer-events-none absolute bottom-3 right-3 z-20">
                 <div className="rounded-full border border-white/20 bg-black/75 px-4 py-2 text-[10px] font-semibold tracking-[0.3em] text-white shadow-lg backdrop-blur-sm">
-                  MAGIC MIRROR
+                  BRIGHTBRIDGE
                 </div>
               </div>
             </div>

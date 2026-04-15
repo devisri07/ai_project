@@ -20,7 +20,7 @@ MODE_STRUCTURE = {
 }
 
 WEBSITE_CONTEXT = """
-Magic Mirror website features:
+BrightBridge website features:
 - webcam-based joy and sad emotion detection
 - age-based adaptive storytelling
 - YouTube story playback inside the website
@@ -45,7 +45,7 @@ def _gemini_reply(message: str, emotion: str, mode: str) -> str | None:
 
     prompt = (
         f"{WEBSITE_CONTEXT}\n\n"
-        "You are the chatbot inside the Magic Mirror website. "
+        "You are the chatbot inside the BrightBridge website. "
         "Answer the user's exact question directly. "
         "If the question is about the website, answer using the website context above. "
         "If the question is general, answer normally. "
@@ -108,7 +108,7 @@ def _local_chat_reply(message: str, emotion: str, mode: str) -> str:
 
     if any(phrase in normalized for phrase in ["what can this website do", "about this website", "what is this website for"]):
         return (
-            "Magic Mirror can scan emotion, play a matching story, show video suggestions, and give a 3-question quiz."
+            "BrightBridge can scan emotion, play a matching story, show video suggestions, and give a 3-question quiz."
         )
 
     if any(word in normalized for word in ["how to use", "how do i use", "how does this work", "what do i do first"]):
@@ -184,7 +184,7 @@ def _local_chat_reply(message: str, emotion: str, mode: str) -> str:
         return "The student side can show rewards and badges after progress."
 
     if any(word in normalized for word in ["chatbot", "chat", "ask you"]):
-        return "I am the Magic Mirror chatbot. I can help and guide you."
+        return "I am the BrightBridge chatbot. I can help and guide you."
 
     if (
         ("scan" in normalized or "camera" in normalized or "webcam" in normalized or "emotion" in normalized)
@@ -214,7 +214,7 @@ def _local_chat_reply(message: str, emotion: str, mode: str) -> str:
         return "The frontend talks to the Flask backend through API calls."
 
     if "who are you" in normalized:
-        return "I am the Magic Mirror chatbot, your friendly helper."
+        return "I am the BrightBridge chatbot, your friendly helper."
 
     return (
         f"{emotion_prefix} {structure} "
@@ -227,7 +227,7 @@ def _should_use_local_first(message: str) -> bool:
     words = normalized.replace("?", " ").replace("!", " ").replace(".", " ").split()
     website_keywords = [
         "website",
-        "magic mirror",
+        "brightbridge",
         "scan",
         "emotion",
         "story",

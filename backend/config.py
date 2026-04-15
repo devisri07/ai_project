@@ -16,7 +16,7 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-secret-change-me")
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URI",
-        f"sqlite:///{os.path.join(BASE_DIR, 'magic_mirror.db').replace(os.sep, '/')}",
+        f"sqlite:///{os.path.join(BASE_DIR, 'brightbridge.db').replace(os.sep, '/')}",
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JSON_SORT_KEYS = False

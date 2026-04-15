@@ -57,6 +57,13 @@ export async function generateStory(payload: {
   });
 }
 
+export async function completeStory(payload: { session_token?: string; title?: string }) {
+  return request<{ status: string; stories_completed: number }>("/story/complete", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function submitQuiz(payload: { session_token?: string; answers: boolean[] }) {
   return request<{ accuracy: number; correct: number; total: number }>("/quiz/submit", {
     method: "POST",
@@ -107,4 +114,25 @@ export async function getQuizGazeDirection(frame_base64: string) {
     method: "POST",
     body: JSON.stringify({ frame_base64 }),
   });
+}
+
+export async function getParentDashboard() {
+  return request<{
+    emotion_history: Record<string, number>;
+    emotion_chart: { labels: string[]; values: number[] };
+    attention_chart: { labels: string[]; values: number[] };
+    story_chart: { labels: string[]; values: number[] };
+    quiz_chart: { labels: string[]; values: number[] };
+    attention_trend_average: number;
+    story_completion_rate: number;
+    quiz_accuracy: number;
+    summary: {
+      stories_completed: number;
+      avg_attention: number;
+      sessions_count: number;
+      improvement: number;
+      reward_points: number;
+    };
+    recommended_improvements: string[];
+  }>("/dashboard/parent");
 }

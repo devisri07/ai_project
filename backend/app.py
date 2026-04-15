@@ -1,6 +1,6 @@
 import os
 import uuid
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -129,7 +129,7 @@ def create_app():
         return jsonify(
             {
                 "status": "ok",
-                "service": "magic-mirror-backend",
+                "service": "brightbridge-backend",
                 "emotion_model_loaded": analyzer.model is not None,
                 "emotion_model_path": app.config["EMOTION_MODEL_PATH"],
                 "emotion_classes": analyzer.class_names,
@@ -242,6 +242,32 @@ def create_app():
 
         return jsonify({"story": story, "audio_path": audio_path})
 
+    @app.route("/api/story/complete", methods=["POST"])
+    def story_complete():
+        data = _json_payload()
+        session_token = data.get("session_token")
+        title = data.get("title")
+        if not session_token:
+            return jsonify({"error": "session_token is required"}), 400
+
+        session_row = GuestSession.query.filter_by(session_token=session_token).first()
+        if not session_row:
+            return jsonify({"error": "session not found"}), 404
+
+        query = StoryRecord.query.filter_by(session_token=session_token, completed=False)
+        if title:
+            query = query.filter_by(title=title)
+        story_row = query.order_by(StoryRecord.created_at.desc()).first()
+
+        if story_row:
+            story_row.completed = True
+            session_row.stories_completed = (session_row.stories_completed or 0) + 1
+            session_row.reward_points = (session_row.reward_points or 0) + 10
+            db.session.commit()
+            return jsonify({"status": "completed", "stories_completed": session_row.stories_completed})
+
+        return jsonify({"status": "already_recorded", "stories_completed": session_row.stories_completed or 0})
+
     @app.route("/api/monitor/update", methods=["POST"])
     def monitor_update():
         data = _json_payload()
@@ -316,6 +342,20 @@ def create_app():
         sessions = GuestSession.query.order_by(GuestSession.started_at.desc()).all()
         readings = EmotionAttentionReading.query.all()
         quizzes = QuizAttempt.query.all()
+        stories = StoryRecord.query.order_by(StoryRecord.created_at.asc()).all()
+
+        quiz_by_session = defaultdict(list)
+        for quiz in quizzes:
+            quiz_by_session[quiz.session_token].append(quiz)
+
+        active_tokens = {
+            row.session_token for row in readings
+        } | {
+            row.session_token for row in quizzes
+        } | {
+            row.session_token for row in stories if row.completed
+        }
+        active_sessions = [row for row in sessions if row.session_token in active_tokens]
 
         emotion_counter = Counter([r.emotion for r in readings]) if readings else Counter()
         avg_attention = (
@@ -326,30 +366,95 @@ def create_app():
         quiz_accuracy = (
             round(sum([q.accuracy for q in quizzes]) / len(quizzes), 2) if quizzes else 0.0
         )
+        completed_story_count = sum(1 for row in stories if row.completed)
+        total_story_count = len(stories)
         completion_rate = (
-            round(
-                (
-                    sum([s.stories_completed for s in sessions])
-                    / max(1, len(sessions))
-                )
-                * 100,
-                2,
-            )
-            if sessions
+            round((completed_story_count / max(1, total_story_count)) * 100, 2)
+            if total_story_count
             else 0.0
         )
 
+        recent_sessions = active_sessions[:7]
+        attention_labels = [
+            (row.started_at.strftime("%d %b") if row.started_at else f"Session {index + 1}")
+            for index, row in enumerate(reversed(recent_sessions))
+        ]
+        attention_values = [
+            round((row.avg_attention_score or 0.0), 2) for row in reversed(recent_sessions)
+        ]
+
+        story_groups = defaultdict(int)
+        for row in stories:
+            key = row.created_at.strftime("%d %b") if row.created_at else "Unknown"
+            if row.completed:
+                story_groups[key] += 1
+
+        quiz_correct = sum([q.correct_answers for q in quizzes]) if quizzes else 0
+        quiz_total = sum([q.total_questions for q in quizzes]) if quizzes else 0
+        quiz_incorrect = max(quiz_total - quiz_correct, 0)
+
+        session_count = len(active_sessions)
+        latest_reward_points = active_sessions[0].reward_points if active_sessions else 0
+
+        def _session_score(session_row):
+            session_quizzes = quiz_by_session.get(session_row.session_token, [])
+            session_quiz_avg = (
+                sum(q.accuracy for q in session_quizzes) / len(session_quizzes)
+                if session_quizzes
+                else 0.0
+            )
+            return (
+                (session_row.avg_attention_score or 0.0) * 0.6
+                + session_quiz_avg * 0.3
+                + min((session_row.stories_completed or 0) * 5, 10)
+            )
+
+        improvement = 0.0
+        if len(active_sessions) >= 2:
+            latest_score = _session_score(active_sessions[0])
+            previous_score = _session_score(active_sessions[1])
+            improvement = round(latest_score - previous_score, 2)
+
+        recommendations = []
+        if avg_attention < 60:
+            recommendations.append("Use shorter story sessions and add a calming break before the quiz.")
+        if quiz_accuracy < 65:
+            recommendations.append("Replay the key message of the story before asking quiz questions.")
+        if completion_rate < 80:
+            recommendations.append("Choose shorter age-matched videos so the student can finish more stories.")
+        if not recommendations:
+            recommendations.append("Progress looks steady. Keep using age-based stories and short quiz review.")
+
         return jsonify(
             {
-                "emotion_history": emotion_counter,
+                "emotion_history": dict(emotion_counter),
+                "emotion_chart": {
+                    "labels": list(emotion_counter.keys()) or ["No Data"],
+                    "values": list(emotion_counter.values()) or [1],
+                },
                 "attention_trend_average": avg_attention,
+                "attention_chart": {
+                    "labels": attention_labels or ["No Sessions"],
+                    "values": attention_values or [0],
+                },
+                "story_chart": {
+                    "labels": list(story_groups.keys()) or ["No Stories"],
+                    "values": list(story_groups.values()) or [0],
+                },
+                "quiz_chart": {
+                    "labels": ["Correct", "Incorrect"],
+                    "values": [quiz_correct, quiz_incorrect],
+                },
                 "story_completion_rate": completion_rate,
                 "quiz_accuracy": quiz_accuracy,
-                "recommended_improvements": [
-                    "Use short breathing pauses before difficult scenes.",
-                    "Prefer subtitle-rich mode for hearing support.",
-                    "Repeat key learning points at scene transitions.",
-                ],
+                "summary": {
+                    "stories_completed": completed_story_count,
+                    "avg_attention": avg_attention,
+                    "sessions_count": session_count,
+                    "improvement": improvement,
+                    "reward_points": latest_reward_points,
+                },
+                "recommended_improvements": recommendations,
             }
         )
 
@@ -443,7 +548,7 @@ def create_app():
     def root():
         return jsonify(
             {
-                "message": "Magic Mirror backend running",
+                "message": "BrightBridge backend running",
                 "guest_mode": True,
                 "hint": "Use /api/health and /api/scan/analyze for model status and emotion scanning.",
             }

@@ -131,7 +131,7 @@ const YouTubeConverter = () => {
         >
           Video Converter
         </motion.h1>
-        <p className="mb-8 text-muted-foreground">Paste a YouTube link and play the converted result inside Magic Mirror.</p>
+        <p className="mb-8 text-muted-foreground">Paste a YouTube link and play the converted result inside BrightBridge.</p>
 
         <div className="glass-card mb-6 p-6">
           <label className="mb-2 block text-sm font-semibold text-foreground">YouTube URL</label>
@@ -221,7 +221,7 @@ const YouTubeConverter = () => {
                   />
                   <div className="pointer-events-none absolute bottom-3 right-3 z-10">
                     <div className="rounded-full border border-white/20 bg-black/75 px-4 py-2 text-[10px] font-semibold tracking-[0.3em] text-white shadow-lg backdrop-blur-sm">
-                      MAGIC MIRROR
+                      BRIGHTBRIDGE
                     </div>
                   </div>
                 </div>

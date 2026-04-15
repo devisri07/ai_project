@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { CheckCircle, Eye, Star, Trophy, XCircle } from "lucide-react";
 
 import { findVideoByUrl } from "@/data/sampleVideos";
+import { submitQuiz } from "@/services/api";
 
 interface QuizQuestion {
   question: string;
@@ -132,6 +133,7 @@ const QuizPage = () => {
   const emotion = searchParams.get("emotion") || "Joy";
   const ageGroup = searchParams.get("age") || "1-10";
   const videoUrl = searchParams.get("video") || "";
+  const sessionToken = searchParams.get("session") || "";
   const storyTitleParam = decodeURIComponent(searchParams.get("story") || "Story");
   const matchedVideo = findVideoByUrl(videoUrl);
   const storyTitle = matchedVideo?.title || storyTitleParam;
@@ -147,7 +149,10 @@ const QuizPage = () => {
   const [score, setScore] = useState(0);
   const [quizDone, setQuizDone] = useState(false);
   const [hoveredOption, setHoveredOption] = useState<number | null>(null);
+  const [answers, setAnswers] = useState<boolean[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   const autoAdvanceRef = useRef<number | null>(null);
+  const submitRef = useRef(false);
 
   const q = questions[currentQ];
   const isCorrect = selected === q.correct;
@@ -160,7 +165,9 @@ const QuizPage = () => {
     setSelected(index);
     setShowResult(true);
     setHoveredOption(null);
-    if (index === q.correct) {
+    const correct = index === q.correct;
+    setAnswers((prev) => [...prev, correct]);
+    if (correct) {
       setScore((prev) => prev + 1);
     }
 
@@ -183,6 +190,17 @@ const QuizPage = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!quizDone || submitRef.current) return;
+    submitRef.current = true;
+    if (!sessionToken || answers.length === 0) return;
+
+    setSubmitting(true);
+    submitQuiz({ session_token: sessionToken, answers })
+      .catch(() => null)
+      .finally(() => setSubmitting(false));
+  }, [quizDone, sessionToken, answers]);
+
   if (quizDone) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -198,6 +216,7 @@ const QuizPage = () => {
           <p className="mb-6 text-lg text-muted-foreground">
             You scored {score} out of {questions.length}
           </p>
+          {submitting && <p className="mb-4 text-sm text-muted-foreground">Saving quiz result...</p>}
           <div className="mb-6 flex items-center justify-center gap-2">
             {questions.map((_, index) => (
               <Star

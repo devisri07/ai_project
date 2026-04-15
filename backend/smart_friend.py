@@ -83,7 +83,7 @@ def _gemini_reply(prompt: str, mode: str) -> Dict[str, object] | None:
         return None
 
     system_prompt = (
-        "You are Smart Friend inside Magic Mirror. "
+        "You are Smart Friend inside BrightBridge. "
         "Give child-friendly craft guidance. "
         "Return only JSON with keys: title, materials, steps, encouragement, voice_text. "
         "Use short simple steps. "
